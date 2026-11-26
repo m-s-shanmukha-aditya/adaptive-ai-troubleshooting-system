@@ -1,0 +1,31 @@
+{
+  "blueprint_id": "bc686ee9-035f-54dc-8a80-972fd5c91b0b",
+  "version": "1.0.0",
+  "active": false,
+  "title": "HTTP Gateway 502 and Unhealthy Upstream",
+  "problem_summary": "A reverse proxy or API gateway returns 502 when it cannot connect to a healthy configured upstream.",
+  "category": "web_infrastructure",
+  "symptoms": ["502 Bad Gateway", "no healthy upstream", "gateway cannot connect to backend"],
+  "environment": {},
+  "preconditions": ["A gateway or reverse proxy forwards requests to an upstream service"],
+  "steps": [
+    {"step_number": 1, "instruction": "Inspect gateway health and upstream selection logs.", "expected_result": "The gateway identifies at least one healthy upstream.", "failure_action": "Check the configured upstream targets and health-check results."},
+    {"step_number": 2, "instruction": "Check reachability from the gateway to each configured upstream.", "expected_result": "The gateway can reach a healthy backend on its configured port.", "failure_action": "Correct only a confirmed target, port, or network policy issue."}
+  ],
+  "verification_checks": [
+    {"description": "Repeat the request through the gateway.", "success_condition": "The gateway returns the backend response rather than a 502."}
+  ],
+  "tags": ["http", "gateway", "reverse-proxy", "502", "upstream", "api"],
+  "diagnoses": {
+    "gateway_no_healthy_upstream": {"meaning": "Gateway reports that no configured upstream is healthy", "supporting_evidence": ["reported_detail_1"]},
+    "gateway_failure_uncertain": {"meaning": "The 502 symptom alone does not identify the failing layer", "supporting_evidence": []}
+  },
+  "actions": {
+    "inspect_upstream_health": {"meaning": "Inspect gateway health-check results for configured upstreams", "diagnosis_ids": ["gateway_no_healthy_upstream", "gateway_failure_uncertain"]},
+    "verify_gateway_target": {"meaning": "Check the configured upstream host and port", "diagnosis_ids": ["gateway_no_healthy_upstream", "gateway_failure_uncertain"]},
+    "inspect_gateway_error_logs": {"meaning": "Collect the relevant gateway error details", "diagnosis_ids": ["gateway_failure_uncertain"]}
+  },
+  "status": "draft",
+  "success_count": 0,
+  "failure_count": 0
+}

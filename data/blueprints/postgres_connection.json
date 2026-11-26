@@ -1,0 +1,89 @@
+
+{
+  "blueprint_id": "afd7f1ad-9936-56fe-be55-58fbd41ec5f1",
+  "version": "1.0.0",
+  "active": false,
+  "title": "Spring Boot PostgreSQL Connection Failure",
+  "problem_summary": "A Spring Boot application fails to establish a connection to a PostgreSQL database.",
+  "category": "database",
+  "symptoms": [
+    "Connection refused",
+    "Application fails during startup",
+    "Unable to connect to PostgreSQL"
+  ],
+  "environment": {
+    "framework": "Spring Boot",
+    "database": "PostgreSQL",
+    "operating_system": "Windows"
+  },
+  "preconditions": [
+    "PostgreSQL is installed",
+    "The application has a configured database connection URL"
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "instruction": "Check whether the PostgreSQL service is running.",
+      "expected_result": "The PostgreSQL service is active.",
+      "failure_action": "Start the service if it is stopped."
+    },
+    {
+      "step_number": 2,
+      "instruction": "Verify that the configured PostgreSQL port is reachable.",
+      "expected_result": "The database port accepts connections.",
+      "failure_action": "Check the configured port and database server settings."
+    },
+    {
+      "step_number": 3,
+      "instruction": "Inspect the Spring Boot datasource URL.",
+      "expected_result": "The hostname, port, and database name are correct.",
+      "failure_action": "Correct the datasource URL."
+    },
+    {
+      "step_number": 4,
+      "instruction": "Verify the database username and password.",
+      "expected_result": "The credentials are valid.",
+      "failure_action": "Check the credentials and database permissions."
+    }
+  ],
+  "verification_checks": [
+    {
+      "description": "Verify database connectivity.",
+      "success_condition": "The Spring Boot application establishes a database connection successfully."
+    }
+  ],
+  "tags": [
+    "spring-boot",
+    "postgresql",
+    "database",
+    "connection-error",
+    "jdbc"
+  ],
+  "diagnoses": {
+    "postgres_service_stopped": {"meaning": "PostgreSQL service is reported stopped", "supporting_evidence": ["service_state"]},
+    "datasource_port_incorrect": {"meaning": "Configured datasource and listener ports differ", "supporting_evidence": ["port_mismatch"]},
+    "database_credentials_invalid": {"meaning": "Database authentication is reported rejected", "supporting_evidence": ["authentication_failure", "credentials_state"]},
+    "database_name_incorrect": {"meaning": "Requested database is reported missing", "supporting_evidence": ["database_not_found"]},
+    "connection_successful": {"meaning": "Connection is reported successful", "supporting_evidence": ["connection_success"]},
+    "postgres_connection_issue_uncertain": {"meaning": "Evidence does not yet isolate a cause", "supporting_evidence": []}
+  },
+  "actions": {
+    "start_postgres_service": {"meaning": "Start PostgreSQL only if confirmed stopped", "diagnosis_ids": ["postgres_service_stopped"]},
+    "verify_service_status": {"meaning": "Check whether the service is active", "diagnosis_ids": ["postgres_service_stopped", "postgres_connection_issue_uncertain"]},
+    "align_datasource_port": {"meaning": "Align datasource with confirmed listener port", "diagnosis_ids": ["datasource_port_incorrect"]},
+    "verify_listener_port": {"meaning": "Check the listening port", "diagnosis_ids": ["datasource_port_incorrect", "postgres_connection_issue_uncertain"]},
+    "verify_credentials_securely": {"meaning": "Check credentials without revealing them", "diagnosis_ids": ["database_credentials_invalid", "postgres_connection_issue_uncertain"]},
+    "rotate_credentials_if_needed": {"meaning": "Rotate credentials through approved secret management", "diagnosis_ids": ["database_credentials_invalid"]},
+    "align_database_name": {"meaning": "Correct a confirmed database-name mismatch", "diagnosis_ids": ["database_name_incorrect"]},
+    "verify_database_exists": {"meaning": "Check whether the intended database exists", "diagnosis_ids": ["database_name_incorrect", "postgres_connection_issue_uncertain"]},
+    "make_no_configuration_change": {"meaning": "Avoid changes when connection succeeds", "diagnosis_ids": ["connection_successful"]},
+    "confirm_application_health": {"meaning": "Check application health", "diagnosis_ids": ["connection_successful"]},
+    "check_host_reachability": {"meaning": "Check network reachability", "diagnosis_ids": ["postgres_connection_issue_uncertain"]},
+    "verify_datasource_url": {"meaning": "Inspect configured connection URL", "diagnosis_ids": ["postgres_connection_issue_uncertain", "datasource_port_incorrect", "database_name_incorrect"]},
+    "inspect_database_error": {"meaning": "Inspect the exact reported error", "diagnosis_ids": ["postgres_connection_issue_uncertain"]},
+    "request_connection_details": {"meaning": "Request relevant details with secrets redacted", "diagnosis_ids": ["postgres_connection_issue_uncertain"]}
+  },
+  "status": "draft",
+  "success_count": 0,
+  "failure_count": 0
+}
