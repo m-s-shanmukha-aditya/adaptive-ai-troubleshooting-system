@@ -22,6 +22,7 @@ class InterpretedObservation(BaseModel):
     description: str
     polarity: Literal["present", "absent"]
     matched_text: str
+    captures: dict[str, str] = Field(default_factory=dict)
     supports_diagnoses: list[str] = Field(default_factory=list)
 
 
@@ -30,13 +31,20 @@ class SkippedPattern(BaseModel):
     reason: str
 
 
+class SkippedComparison(BaseModel):
+    id: str
+    reason: str
+
+
 class RuleInterpretation(BaseModel):
     observations: list[InterpretedObservation] = Field(default_factory=list)
     clarification_questions: list[str] = Field(default_factory=list)
     matched_rule_ids: list[str] = Field(default_factory=list)
     clarification_rule_ids: list[str] = Field(default_factory=list)
+    suppressed_rule_ids: list[str] = Field(default_factory=list)
     truncated: bool = False
     skipped_patterns: list[SkippedPattern] = Field(default_factory=list)
+    skipped_comparisons: list[SkippedComparison] = Field(default_factory=list)
 
 
 class RuleInterpreter:
@@ -54,14 +62,16 @@ class RuleInterpreter:
         observations = []
         matched_rule_ids = []
         clarification_rule_ids = []
+        suppressed_rule_ids = []
         fired_observation_ids = set()
+        fired_observations = {}
         skipped_patterns = []
 
         for rule in blueprint.observation_rules:
+            matched = None
             for pattern in rule.patterns:
                 try:
                     match = re.search(pattern, bounded_text, re.IGNORECASE)
-                    matched_text = match.group(0) if match is not None else None
                 except Exception as exc:
                     skipped_patterns.append(
                         SkippedPattern(
@@ -71,19 +81,98 @@ class RuleInterpreter:
                     )
                     continue
 
-                if matched_text is not None:
-                    observations.append(
-                        InterpretedObservation(
-                            id=rule.id,
-                            description=rule.description,
-                            polarity=rule.polarity,
-                            matched_text=matched_text[:MAX_MATCHED_TEXT_CHARS],
-                            supports_diagnoses=list(rule.supports_diagnoses),
+                if match is not None:
+                    matched = match
+                    break
+
+            if matched is None:
+                continue
+
+            captures = {
+                name: value[:64]
+                for name, value in matched.groupdict().items()
+                if value is not None
+            }
+            matched_text = matched.group(0)
+            is_suppressed = False
+            for pattern in rule.suppressed_by:
+                try:
+                    if re.search(pattern, bounded_text, re.IGNORECASE) is not None:
+                        is_suppressed = True
+                        break
+                except Exception as exc:
+                    skipped_patterns.append(
+                        SkippedPattern(
+                            rule_id=rule.id,
+                            reason=f"{type(exc).__name__}: {exc}",
                         )
                     )
-                    matched_rule_ids.append(rule.id)
-                    fired_observation_ids.add(rule.id)
-                    break
+
+            if is_suppressed:
+                suppressed_rule_ids.append(rule.id)
+                continue
+
+            observation = InterpretedObservation(
+                id=rule.id,
+                description=rule.description,
+                polarity=rule.polarity,
+                matched_text=matched_text[:MAX_MATCHED_TEXT_CHARS],
+                captures=captures,
+                supports_diagnoses=list(rule.supports_diagnoses),
+            )
+            observations.append(observation)
+            fired_observations[rule.id] = observation
+            matched_rule_ids.append(rule.id)
+            fired_observation_ids.add(rule.id)
+
+        skipped_comparisons = []
+        for rule in blueprint.comparison_rules:
+            left_rule_id, left_group = rule.left.split(".")
+            right_rule_id, right_group = rule.right.split(".")
+            left_observation = fired_observations.get(left_rule_id)
+            right_observation = fired_observations.get(right_rule_id)
+            if left_observation is None or right_observation is None:
+                continue
+
+            left_value = left_observation.captures.get(left_group)
+            right_value = right_observation.captures.get(right_group)
+            if left_value is None or right_value is None:
+                continue
+
+            if rule.numeric:
+                try:
+                    left_comparable = int(left_value)
+                    right_comparable = int(right_value)
+                except (TypeError, ValueError):
+                    skipped_comparisons.append(
+                        SkippedComparison(
+                            id=rule.id,
+                            reason="numeric comparison requires integer capture values",
+                        )
+                    )
+                    continue
+            else:
+                left_comparable = left_value
+                right_comparable = right_value
+
+            comparison_matches = (
+                left_comparable == right_comparable
+                if rule.op == "equal"
+                else left_comparable != right_comparable
+            )
+            if comparison_matches:
+                observations.append(
+                    InterpretedObservation(
+                        id=rule.id,
+                        description=rule.description,
+                        polarity="present",
+                        matched_text=(
+                            f"{left_value} {rule.op} {right_value}"
+                        )[:MAX_MATCHED_TEXT_CHARS],
+                        captures={"left": left_value, "right": right_value},
+                        supports_diagnoses=list(rule.supports_diagnoses),
+                    )
+                )
 
         clarification_questions = []
         for rule in blueprint.clarification_rules:
@@ -101,6 +190,8 @@ class RuleInterpreter:
             clarification_questions=clarification_questions,
             matched_rule_ids=matched_rule_ids,
             clarification_rule_ids=clarification_rule_ids,
+            suppressed_rule_ids=suppressed_rule_ids,
             truncated=truncated,
             skipped_patterns=skipped_patterns,
+            skipped_comparisons=skipped_comparisons,
         )

@@ -344,6 +344,252 @@
         "follow_up_questions": [],
         "diagnostic_status": "uncertain"
       }
+    },
+    {
+      "id": "pg_service_stopped_paraphrase_one",
+      "output": {
+        "issue": "Spring Boot cannot reach PostgreSQL because the PostgreSQL service is stopped.",
+        "conditions": [],
+        "constraints": [
+          "Spring Boot cannot reach PostgreSQL because the PostgreSQL service is stopped."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "service_state": "stopped"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_service_stopped_paraphrase_two",
+      "output": {
+        "issue": "PostgreSQL is not running, so the Spring Boot application cannot connect.",
+        "conditions": [],
+        "constraints": [
+          "PostgreSQL is not running, so the Spring Boot application cannot connect."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "service_state": "stopped"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_port_mismatch_listener_first",
+      "output": {
+        "issue": "PostgreSQL is listening on port 5432, while Spring Boot is configured to use port 5433.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "datasource_port": "5433",
+          "listener_port": "5432",
+          "port_mismatch": "configured=5433; listener=5432"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_port_mismatch_datasource_first",
+      "output": {
+        "issue": "The datasource URL uses port 5433; the PostgreSQL server is listening on port 5432.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "datasource_port": "5433",
+          "listener_port": "5432",
+          "port_mismatch": "configured=5433; listener=5432"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_bad_credentials_definite",
+      "output": {
+        "issue": "Spring Boot cannot log in to PostgreSQL: the username or password is incorrect.",
+        "conditions": [],
+        "constraints": [
+          "Spring Boot cannot log in to PostgreSQL: the username or password is incorrect."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "credentials_state": "reported_invalid"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_bad_credentials_maybe",
+      "output": {
+        "issue": "Maybe the PostgreSQL username or password is wrong; Spring Boot cannot connect.",
+        "conditions": [],
+        "constraints": [
+          "Maybe the PostgreSQL username or password is wrong; Spring Boot cannot connect."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "pg_bad_credentials_i_think",
+      "output": {
+        "issue": "I think the PostgreSQL username or password is incorrect.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "credentials_state": "reported_invalid"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_wrong_database_name",
+      "output": {
+        "issue": "Spring Boot reports that the configured PostgreSQL database name does not exist.",
+        "conditions": [
+          "does not exist"
+        ],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "The configured database name may not exist."
+        ],
+        "observations": {
+          "database_not_found": "does not exist"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "pg_unknown_host_paraphrase",
+      "output": {
+        "issue": "Spring Boot cannot resolve the PostgreSQL host; UnknownHostException names pg-db.internal.",
+        "conditions": [
+          "unknownhost"
+        ],
+        "constraints": [
+          "Spring Boot cannot resolve the PostgreSQL host; UnknownHostException names pg-db.internal."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "The configured hostname did not resolve."
+        ],
+        "observations": {
+          "hostname_unresolved": "unknownhost"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "pg_connection_successful_paraphrase",
+      "output": {
+        "issue": "Spring Boot established a connection to PostgreSQL; the connection succeeds.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "connection_success": "reported"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_connection_timeout",
+      "output": {
+        "issue": "Spring Boot reports a PostgreSQL connection timeout while opening the database session.",
+        "conditions": [
+          "timeout"
+        ],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "The host, port, or network path may be unavailable."
+        ],
+        "observations": {
+          "connection_timeout": "timeout"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "pg_mixed_signals_paraphrase",
+      "output": {
+        "issue": "PostgreSQL service is running; PostgreSQL is listening on port 5432; the datasource is configured to use port 5433; password authentication failed.",
+        "conditions": [
+          "password authentication"
+        ],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "Authentication failed; verify the configured credentials securely."
+        ],
+        "observations": {
+          "authentication_failed": "password authentication",
+          "datasource_port": "5433",
+          "listener_port": "5432",
+          "port_mismatch": "configured=5433; listener=5432",
+          "service_state": "running",
+          "authentication_failure": "password_authentication_failed"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
     }
   ]
 }

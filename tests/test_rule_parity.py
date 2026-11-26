@@ -22,16 +22,12 @@ OLD_OUTPUTS = {
 }
 
 KNOWN_GAPS = {
-    # Port mismatch requires comparing the configured and listener port values.
-    "pg_port_mismatch": {"port_mismatch"},
-    # Definite credential status requires respecting the analyzer's nearby-hedge check.
-    "pg_bad_credentials": {"credentials_state"},
-    # The mixed report also needs comparison of the two extracted port values.
-    "pg_mixed_signals": {"port_mismatch"},
-    # Redis-only analyzer outputs must not be made PostgreSQL rules that fire cross-domain.
+    # Old analyzer behavior that is intentionally not reproduced: Redis-only IDs must not fire cross-domain.
     "redis_connection_refused": {"connection_refused", "service_state"},
-    # Generic reported-detail extraction should not be encoded as a PostgreSQL-specific rule.
+    # Generic stage-1 fact: arbitrary error-detail extraction is not PostgreSQL-specific.
     "java_out_of_memory": {"reported_detail_1"},
+    # The rule suppresses "I think" hedging; the unchanged analyzer does not recognize that hedge.
+    "pg_bad_credentials_i_think": {"credentials_state"},
 }
 
 
@@ -39,7 +35,7 @@ def _observation_ids(result) -> set[str]:
     return {observation.id for observation in result.observations}
 
 
-def test_postgres_rule_observation_parity_and_recorded_gaps():
+def test_all_case_observation_parity_and_recorded_gaps():
     blueprint = build_postgres_rules_blueprint()
     interpreter = RuleInterpreter()
     seen_gaps = set()

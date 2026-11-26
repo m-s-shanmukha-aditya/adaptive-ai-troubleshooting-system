@@ -79,6 +79,54 @@
     {
       "id": "slow_api",
       "issue": "The API responds slowly and requests take 15 seconds to complete."
+    },
+    {
+      "id": "pg_service_stopped_paraphrase_one",
+      "issue": "Spring Boot cannot reach PostgreSQL because the PostgreSQL service is stopped."
+    },
+    {
+      "id": "pg_service_stopped_paraphrase_two",
+      "issue": "PostgreSQL is not running, so the Spring Boot application cannot connect."
+    },
+    {
+      "id": "pg_port_mismatch_listener_first",
+      "issue": "PostgreSQL is listening on port 5432, while Spring Boot is configured to use port 5433."
+    },
+    {
+      "id": "pg_port_mismatch_datasource_first",
+      "issue": "The datasource URL uses port 5433; the PostgreSQL server is listening on port 5432."
+    },
+    {
+      "id": "pg_bad_credentials_definite",
+      "issue": "Spring Boot cannot log in to PostgreSQL: the username or password is incorrect."
+    },
+    {
+      "id": "pg_bad_credentials_maybe",
+      "issue": "Maybe the PostgreSQL username or password is wrong; Spring Boot cannot connect."
+    },
+    {
+      "id": "pg_bad_credentials_i_think",
+      "issue": "I think the PostgreSQL username or password is incorrect."
+    },
+    {
+      "id": "pg_wrong_database_name",
+      "issue": "Spring Boot reports that the configured PostgreSQL database name does not exist."
+    },
+    {
+      "id": "pg_unknown_host_paraphrase",
+      "issue": "Spring Boot cannot resolve the PostgreSQL host; UnknownHostException names pg-db.internal."
+    },
+    {
+      "id": "pg_connection_successful_paraphrase",
+      "issue": "Spring Boot established a connection to PostgreSQL; the connection succeeds."
+    },
+    {
+      "id": "pg_connection_timeout",
+      "issue": "Spring Boot reports a PostgreSQL connection timeout while opening the database session."
+    },
+    {
+      "id": "pg_mixed_signals_paraphrase",
+      "issue": "PostgreSQL service is running; PostgreSQL is listening on port 5432; the datasource is configured to use port 5433; password authentication failed."
     }
   ]
 }

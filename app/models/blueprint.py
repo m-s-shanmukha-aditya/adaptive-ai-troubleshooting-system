@@ -11,11 +11,13 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 _RULE_ID_PATTERN = re.compile(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)*\Z")
+_GROUP_NAME_PATTERN = re.compile(r"[a-z_][a-z0-9_]*\Z")
 _ANALYSIS_CONTENT_FIELDS = (
     "domain",
     "aliases",
     "observation_rules",
     "clarification_rules",
+    "comparison_rules",
     "extra_unsafe_phrases",
     "unverified_notice",
 )
@@ -127,22 +129,29 @@ class VerificationCheck(BaseModel):
 
 
 class ObservationRule(BaseModel):
+    """A positive evidence rule with optional whole-report suppression patterns.
+
+    ``suppressed_by`` is intentionally matched against the whole scanned text,
+    not just text preceding a claim; this errs toward asserting less.
+    """
+
     id: str
     description: str
-    patterns: list[str]
+    patterns: list[str] = Field(max_length=20)
     polarity: Literal["present", "absent"] = "present"
     supports_diagnoses: list[str] = Field(default_factory=list)
+    suppressed_by: list[str] = Field(default_factory=list, max_length=20)
 
     @field_validator("id")
     @classmethod
     def validate_id(cls, value: str) -> str:
         return _validate_rule_id(value)
 
-    @field_validator("patterns")
+    @field_validator("patterns", "suppressed_by")
     @classmethod
-    def validate_patterns(cls, patterns: list[str]) -> list[str]:
+    def validate_regex_patterns(cls, patterns: list[str]) -> list[str]:
         if len(patterns) > 20:
-            raise ValueError("an observation rule may have at most 20 patterns")
+            raise ValueError("an observation rule may have at most 20 regexes per field")
         for pattern in patterns:
             if len(pattern) > 200:
                 raise ValueError("regex patterns may not exceed 200 characters")
@@ -154,11 +163,39 @@ class ObservationRule(BaseModel):
                 raise ValueError("regex may not contain nested unbounded quantifiers")
         return patterns
 
+    @model_validator(mode="after")
+    def validate_named_groups(self) -> "ObservationRule":
+        group_count = 0
+        for pattern in self.patterns:
+            named_groups = re.compile(pattern).groupindex
+            group_count += len(named_groups)
+            for name in named_groups:
+                if not _GROUP_NAME_PATTERN.fullmatch(name):
+                    raise ValueError("named capture group names must be lowercase identifiers")
+        if group_count > 5:
+            raise ValueError("an observation rule may define at most five named capture groups")
+        return self
+
 
 class ClarificationRule(BaseModel):
     id: str
     when_missing: list[str]
     question: str
+
+    @field_validator("id")
+    @classmethod
+    def validate_id(cls, value: str) -> str:
+        return _validate_rule_id(value)
+
+
+class ComparisonRule(BaseModel):
+    id: str
+    description: str
+    left: str
+    right: str
+    op: Literal["equal", "not_equal"]
+    numeric: bool = False
+    supports_diagnoses: list[str] = Field(default_factory=list)
 
     @field_validator("id")
     @classmethod
@@ -197,6 +234,7 @@ class ProceduralBlueprint(BaseModel):
     aliases: list[str] = Field(default_factory=list)
     observation_rules: list[ObservationRule] = Field(default_factory=list, max_length=50)
     clarification_rules: list[ClarificationRule] = Field(default_factory=list, max_length=20)
+    comparison_rules: list[ComparisonRule] = Field(default_factory=list, max_length=20)
     extra_unsafe_phrases: list[str] = Field(default_factory=list)
     unverified_notice: str | None = None
 
@@ -219,11 +257,14 @@ class ProceduralBlueprint(BaseModel):
             rule.id for rule in self.observation_rules
         ] + [
             rule.id for rule in self.clarification_rules
+        ] + [
+            rule.id for rule in self.comparison_rules
         ]
         if len(rule_ids) != len(set(rule_ids)):
-            raise ValueError("analysis rule ids must be unique within a blueprint")
+            raise ValueError("observation, clarification, and comparison rule ids must be unique")
 
         observation_ids = {rule.id for rule in self.observation_rules}
+        observation_by_id = {rule.id: rule for rule in self.observation_rules}
         for rule in self.clarification_rules:
             unknown_ids = set(rule.when_missing) - observation_ids
             if unknown_ids:
@@ -232,6 +273,31 @@ class ProceduralBlueprint(BaseModel):
                     + ", ".join(sorted(unknown_ids))
                 )
 
+        for comparison in self.comparison_rules:
+            for reference in (comparison.left, comparison.right):
+                parts = reference.split(".")
+                if len(parts) != 2:
+                    raise ValueError(
+                        "comparison references must use the form observation_id.group"
+                    )
+                observation_id, group_name = parts
+                observation = observation_by_id.get(observation_id)
+                if observation is None:
+                    raise ValueError(
+                        f"comparison references unknown observation rule: {observation_id}"
+                    )
+                if not _GROUP_NAME_PATTERN.fullmatch(group_name):
+                    raise ValueError("comparison references must name a lowercase capture group")
+                available_groups = {
+                    name
+                    for pattern in observation.patterns
+                    for name in re.compile(pattern).groupindex
+                }
+                if group_name not in available_groups:
+                    raise ValueError(
+                        f"comparison references unknown capture group: {reference}"
+                    )
+
         if self.diagnoses:
             diagnosis_ids = set(self.diagnoses)
             for rule in self.observation_rules:
@@ -239,6 +305,13 @@ class ProceduralBlueprint(BaseModel):
                 if unknown_diagnoses:
                     raise ValueError(
                         "observation rule references unknown diagnosis ids: "
+                        + ", ".join(sorted(unknown_diagnoses))
+                    )
+            for rule in self.comparison_rules:
+                unknown_diagnoses = set(rule.supports_diagnoses) - diagnosis_ids
+                if unknown_diagnoses:
+                    raise ValueError(
+                        "comparison rule references unknown diagnosis ids: "
                         + ", ".join(sorted(unknown_diagnoses))
                     )
         return self
@@ -255,6 +328,10 @@ class ProceduralBlueprint(BaseModel):
         for field in _ANALYSIS_CONTENT_FIELDS:
             if field not in self.model_fields_set:
                 content.pop(field)
+        if "observation_rules" in self.model_fields_set:
+            for rule_content, rule in zip(content["observation_rules"], self.observation_rules):
+                if "suppressed_by" not in rule.model_fields_set:
+                    rule_content.pop("suppressed_by", None)
         canonical = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 

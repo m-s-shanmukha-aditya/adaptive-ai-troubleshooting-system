@@ -20,6 +20,16 @@ def _format(values: list[str] | set[str]) -> str:
     return ", ".join(sorted(values)) if values else "(none)"
 
 
+def _fired_rule_ids(result) -> list[str]:
+    fired_ids = result.matched_rule_ids + result.clarification_rule_ids
+    fired_ids.extend(
+        observation.id
+        for observation in result.observations
+        if observation.id not in result.matched_rule_ids
+    )
+    return fired_ids
+
+
 def main() -> None:
     cases = json.loads(CASES_PATH.read_text(encoding="utf-8"))["cases"]
     old_outputs = {
@@ -86,7 +96,7 @@ def main() -> None:
     cross_domain_matches = []
     for case in non_database_cases:
         result = interpreter.interpret(case["issue"], blueprint)
-        fired_ids = result.matched_rule_ids + result.clarification_rule_ids
+        fired_ids = _fired_rule_ids(result)
         if fired_ids:
             cross_domain_matches.append((case["id"], fired_ids))
             print(f"{case['id']}: {_format(fired_ids)}")
@@ -101,7 +111,7 @@ def main() -> None:
     print(
         "redis_connection_refused: old analyzer emitted "
         f"{_format(set(redis_old_ids))}; PostgreSQL rules fired "
-        f"{_format(set(redis_result.matched_rule_ids + redis_result.clarification_rule_ids))}."
+        f"{_format(set(_fired_rule_ids(redis_result)))}."
     )
 
 

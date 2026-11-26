@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from app.models.blueprint import (
     ClarificationRule,
+    ComparisonRule,
     ObservationRule,
     ProceduralBlueprint,
 )
@@ -83,8 +84,10 @@ def test_analysis_fields_have_empty_or_none_defaults():
     assert blueprint.aliases == []
     assert blueprint.observation_rules == []
     assert blueprint.clarification_rules == []
+    assert blueprint.comparison_rules == []
     assert blueprint.extra_unsafe_phrases == []
     assert blueprint.unverified_notice is None
+    assert make_observation_rule().suppressed_by == []
 
 
 def test_docker_port_in_use_blueprint_validates_in_memory():
@@ -123,6 +126,33 @@ def test_observation_rule_rejects_more_than_twenty_patterns():
         make_observation_rule(patterns=["port"] * 21)
 
 
+@pytest.mark.parametrize("pattern", ["(", "x" * 201, "(a+)+"])
+def test_suppression_patterns_use_the_same_regex_validation(pattern):
+    with pytest.raises(ValidationError):
+        make_observation_rule(suppressed_by=[pattern])
+
+
+def test_suppression_patterns_are_limited_to_twenty():
+    with pytest.raises(ValidationError):
+        make_observation_rule(suppressed_by=["maybe"] * 21)
+
+
+def test_named_capture_groups_must_be_lowercase_identifiers():
+    with pytest.raises(ValidationError):
+        make_observation_rule(patterns=[r"(?P<Port>\d+)"])
+
+
+def test_observation_rule_rejects_more_than_five_named_capture_groups():
+    pattern = r"(?P<a>a)(?P<b>b)(?P<c>c)(?P<d>d)(?P<e>e)(?P<f>f)"
+    with pytest.raises(ValidationError):
+        make_observation_rule(patterns=[pattern])
+
+
+def test_named_capture_limit_applies_across_all_patterns():
+    with pytest.raises(ValidationError):
+        make_observation_rule(patterns=[r"(?P<port>\d+)"] * 6)
+
+
 @pytest.mark.parametrize(
     "rule_id",
     ["Upper_case", "has-hyphen", "has space", "_leading", "trailing_", "two__underscores"],
@@ -153,6 +183,118 @@ def test_rule_ids_must_be_unique_across_both_rule_types():
                     question="A question?",
                 )
             ],
+        )
+
+
+def test_comparison_rule_id_must_be_unique_across_all_rule_types():
+    port_rule = make_observation_rule(
+        id="port",
+        patterns=[r"(?P<value>\d+)"],
+    )
+    with pytest.raises(ValidationError):
+        make_blueprint(
+            observation_rules=[port_rule],
+            comparison_rules=[
+                ComparisonRule(
+                    id="port",
+                    description="Same ID.",
+                    left="port.value",
+                    right="port.value",
+                    op="equal",
+                )
+            ],
+        )
+
+
+def test_comparison_rule_id_must_be_unique_with_clarification_rule_ids():
+    port_rule = make_observation_rule(
+        id="port",
+        patterns=[r"(?P<value>\d+)"],
+    )
+    with pytest.raises(ValidationError):
+        make_blueprint(
+            observation_rules=[port_rule],
+            clarification_rules=[
+                ClarificationRule(
+                    id="compare_ports",
+                    when_missing=["port"],
+                    question="Which port?",
+                )
+            ],
+            comparison_rules=[
+                ComparisonRule(
+                    id="compare_ports",
+                    description="Same ID.",
+                    left="port.value",
+                    right="port.value",
+                    op="equal",
+                )
+            ],
+        )
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        ("unknown.value", "port.value"),
+        ("port.missing", "port.value"),
+        ("port", "port.value"),
+    ],
+)
+def test_comparison_references_must_resolve_to_named_observation_groups(left, right):
+    with pytest.raises(ValidationError):
+        make_blueprint(
+            observation_rules=[
+                make_observation_rule(id="port", patterns=[r"(?P<value>\d+)"])
+            ],
+            comparison_rules=[
+                ComparisonRule(
+                    id="compare_ports",
+                    description="Compare ports.",
+                    left=left,
+                    right=right,
+                    op="not_equal",
+                )
+            ],
+        )
+
+
+def test_comparison_supports_diagnoses_must_reference_existing_keys():
+    with pytest.raises(ValidationError):
+        make_blueprint(
+            diagnoses={"known_diagnosis": {}},
+            observation_rules=[
+                make_observation_rule(id="port", patterns=[r"(?P<value>\d+)"])
+            ],
+            comparison_rules=[
+                ComparisonRule(
+                    id="compare_ports",
+                    description="Compare ports.",
+                    left="port.value",
+                    right="port.value",
+                    op="not_equal",
+                    supports_diagnoses=["unknown_diagnosis"],
+                )
+            ],
+        )
+
+
+def test_blueprint_rejects_more_than_twenty_comparison_rules():
+    port_rule = make_observation_rule(id="port", patterns=[r"(?P<value>\d+)"])
+    comparisons = [
+        ComparisonRule(
+            id=f"compare_{index}",
+            description="Compare a port with itself.",
+            left="port.value",
+            right="port.value",
+            op="equal",
+        )
+        for index in range(21)
+    ]
+    with pytest.raises(ValidationError):
+        make_blueprint(
+            observation_rules=[port_rule],
+            comparison_rules=comparisons,
         )
 
 
@@ -229,6 +371,7 @@ def test_existing_blueprints_load_and_preserve_pre_schema_content_hashes():
         "aliases",
         "observation_rules",
         "clarification_rules",
+        "comparison_rules",
         "extra_unsafe_phrases",
         "unverified_notice",
     ],
@@ -246,9 +389,30 @@ def test_set_analysis_fields_are_included_in_content_hash(field):
                 question="Which service is affected?",
             )
         ],
+        "comparison_rules": [
+            ComparisonRule(
+                id="port_comparison",
+                description="Compare ports.",
+                left="configured.port",
+                right="listener.port",
+                op="not_equal",
+                numeric=True,
+            )
+        ],
         "extra_unsafe_phrases": ["delete all data"],
         "unverified_notice": "This fix has not been verified.",
     }
     updated = blueprint.model_copy(update={field: values[field]})
 
     assert updated.content_hash() != blueprint.content_hash()
+
+
+def test_set_suppressed_by_is_included_in_content_hash():
+    without_suppression = make_blueprint(
+        observation_rules=[make_observation_rule()]
+    )
+    with_suppression = make_blueprint(
+        observation_rules=[make_observation_rule(suppressed_by=[r"\bmaybe\b"])]
+    )
+
+    assert with_suppression.content_hash() != without_suppression.content_hash()

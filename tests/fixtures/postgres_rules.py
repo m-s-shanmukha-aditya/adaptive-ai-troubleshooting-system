@@ -1,5 +1,6 @@
 from app.models.blueprint import (
     ClarificationRule,
+    ComparisonRule,
     ObservationRule,
     ProceduralBlueprint,
 )
@@ -33,15 +34,42 @@ def build_postgres_rules_blueprint() -> ProceduralBlueprint:
                 patterns=[r"password authentication"],
             ),
             ObservationRule(
+                id="credentials_state",
+                description="The report states that database credentials are invalid.",
+                patterns=[
+                    r"\b(?:database\s+)?(?:username|user\s+name)\s+or\s+password\s+(?:is|are)\s+(?:incorrect|invalid|wrong)\b",
+                    r"\b(?:incorrect|invalid|wrong)\s+(?:database\s+)?(?:username|user\s+name|password|credentials)\b",
+                    r"\bcredentials?\s+(?:is|are)\s+(?:incorrect|invalid|wrong)\b",
+                ],
+                suppressed_by=[
+                    r"\bmaybe\b",
+                    r"\bmight\b",
+                    r"\bcould\b",
+                    r"\bpossibly\b",
+                    r"\bperhaps\b",
+                    r"\bunsure\b",
+                    r"\buncertain\b",
+                    r"\bnot\s+sure\b",
+                    r"\bdon't\s+think\b",
+                    r"\bdo\s+not\s+think\b",
+                    r"\bi\s+think\b",
+                ],
+            ),
+            ObservationRule(
                 id="datasource_port",
                 description="The report states a configured port.",
-                patterns=[r"\bconfigured\s+to\s+use\s+port\s+\d{1,5}\b"],
+                patterns=[
+                    r"\bconfigured\s+to\s+use\s+port\s+(?P<port>\d{1,5})\b",
+                    r"\bdatasource(?:\s+URL)?\s+uses?\s+port\s+(?P<port>\d{1,5})\b",
+                ],
             ),
             ObservationRule(
                 id="listener_port",
                 description="The report states a PostgreSQL listener port.",
                 patterns=[
-                    r"\bpostgres(?:ql)?\s+is\s+listening\s+on\s+port\s+\d{1,5}\b"
+                    r"\bpostgres(?:ql)?\s+is\s+listening\s+on\s+port\s+(?P<port>\d{1,5})\b",
+                    r"\bpostgres(?:ql)?\s+listening\s+on\s+port\s+(?P<port>\d{1,5})\b",
+                    r"\bpostgres(?:ql)?\s+server\s+is\s+listening\s+on\s+port\s+(?P<port>\d{1,5})\b",
                 ],
             ),
             ObservationRule(
@@ -50,6 +78,7 @@ def build_postgres_rules_blueprint() -> ProceduralBlueprint:
                 patterns=[
                     r"\bpostgres(?:ql)?\s+(?:(?:database|db)\s+)?service\s+(?:is\s+)?(?:running|stopped)\b",
                     r"\bpostgres(?:ql)?\s+is\s+running\b",
+                    r"\bpostgres(?:ql)?\s+is\s+not\s+running\b",
                 ],
             ),
             ObservationRule(
@@ -78,6 +107,21 @@ def build_postgres_rules_blueprint() -> ProceduralBlueprint:
                     r"\bconnection succeeds\b",
                 ],
             ),
+            ObservationRule(
+                id="connection_timeout",
+                description="The report contains a connection timeout.",
+                patterns=[r"\btimeout\b"],
+            ),
+        ],
+        comparison_rules=[
+            ComparisonRule(
+                id="port_mismatch",
+                description="The configured datasource port differs from the PostgreSQL listener port.",
+                left="datasource_port.port",
+                right="listener_port.port",
+                op="not_equal",
+                numeric=True,
+            )
         ],
         clarification_rules=[
             # The sampled analyzer emits no questions; its conflict question needs value comparison.

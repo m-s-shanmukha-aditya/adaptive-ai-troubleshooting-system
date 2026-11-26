@@ -4,6 +4,7 @@ import pytest
 
 from app.models.blueprint import (
     ClarificationRule,
+    ComparisonRule,
     ObservationRule,
     ProceduralBlueprint,
 )
@@ -21,6 +22,7 @@ def make_blueprint(
     blueprint_id: str,
     observation_rules: list[ObservationRule] | None = None,
     clarification_rules: list[ClarificationRule] | None = None,
+    comparison_rules: list[ComparisonRule] | None = None,
     diagnoses: dict[str, dict] | None = None,
 ) -> ProceduralBlueprint:
     return ProceduralBlueprint(
@@ -45,6 +47,7 @@ def make_blueprint(
         diagnoses=diagnoses or {},
         observation_rules=observation_rules or [],
         clarification_rules=clarification_rules or [],
+        comparison_rules=comparison_rules or [],
     )
 
 
@@ -120,6 +123,40 @@ def redis_blueprint() -> ProceduralBlueprint:
                 id="ask_redis_endpoint",
                 when_missing=["redis_connection_refused"],
                 question="Which Redis host and port is the client using?",
+            )
+        ],
+    )
+
+
+def port_comparison_blueprint(
+    *,
+    op: str = "not_equal",
+    numeric: bool = True,
+    configured_pattern: str = r"configured port (?P<port>\d+)",
+    listener_pattern: str = r"listener port (?P<port>\d+)",
+) -> ProceduralBlueprint:
+    return make_blueprint(
+        blueprint_id="port_comparison",
+        observation_rules=[
+            make_observation(
+                "configured_port",
+                "The configured port.",
+                [configured_pattern],
+            ),
+            make_observation(
+                "listener_port",
+                "The listener port.",
+                [listener_pattern],
+            ),
+        ],
+        comparison_rules=[
+            ComparisonRule(
+                id="port_mismatch",
+                description="The configured and listener ports differ.",
+                left="configured_port.port",
+                right="listener_port.port",
+                op=op,
+                numeric=numeric,
             )
         ],
     )
@@ -351,3 +388,151 @@ def test_supports_diagnoses_are_carried_into_observation():
     )
 
     assert result.observations[0].supports_diagnoses == ["port_conflict"]
+
+
+def test_suppressed_by_suppresses_a_matched_rule_using_the_whole_scanned_text():
+    blueprint = make_blueprint(
+        blueprint_id="credential_suppression",
+        observation_rules=[
+            ObservationRule(
+                id="credentials_state",
+                description="Credentials are reported wrong.",
+                patterns=[r"credentials are wrong"],
+                suppressed_by=[r"\bi\s+think\b"],
+            )
+        ],
+    )
+    interpreter = RuleInterpreter()
+
+    asserted = interpreter.interpret("Credentials are wrong.", blueprint)
+    hedged = interpreter.interpret(
+        "Credentials are wrong. " + ("additional context " * 10) + "I think.",
+        blueprint,
+    )
+
+    assert [observation.id for observation in asserted.observations] == [
+        "credentials_state"
+    ]
+    assert hedged.observations == []
+    assert hedged.matched_rule_ids == []
+    assert hedged.suppressed_rule_ids == ["credentials_state"]
+
+
+def test_comparison_emits_when_numeric_port_values_differ():
+    result = RuleInterpreter().interpret(
+        "configured port 5433; listener port 5432",
+        port_comparison_blueprint(),
+    )
+
+    assert [observation.id for observation in result.observations] == [
+        "configured_port",
+        "listener_port",
+        "port_mismatch",
+    ]
+    assert result.observations[-1].captures == {"left": "5433", "right": "5432"}
+    assert result.observations[-1].polarity == "present"
+    assert result.matched_rule_ids == ["configured_port", "listener_port"]
+
+
+def test_comparison_does_not_emit_when_values_are_equal():
+    result = RuleInterpreter().interpret(
+        "configured port 5432; listener port 5432",
+        port_comparison_blueprint(),
+    )
+
+    assert [observation.id for observation in result.observations] == [
+        "configured_port",
+        "listener_port",
+    ]
+    assert result.skipped_comparisons == []
+
+
+def test_equal_comparison_emits_when_values_are_equal():
+    result = RuleInterpreter().interpret(
+        "configured port 5432; listener port 5432",
+        port_comparison_blueprint(op="equal"),
+    )
+
+    assert [observation.id for observation in result.observations] == [
+        "configured_port",
+        "listener_port",
+        "port_mismatch",
+    ]
+
+
+def test_numeric_comparison_with_non_integer_values_is_skipped():
+    blueprint = port_comparison_blueprint(
+        configured_pattern=r"configured port (?P<port>[a-z]+)",
+        listener_pattern=r"listener port (?P<port>[a-z]+)",
+    )
+    result = RuleInterpreter().interpret(
+        "configured port alpha; listener port beta",
+        blueprint,
+    )
+
+    assert [observation.id for observation in result.observations] == [
+        "configured_port",
+        "listener_port",
+    ]
+    assert len(result.skipped_comparisons) == 1
+    assert result.skipped_comparisons[0].id == "port_mismatch"
+    assert "integer" in result.skipped_comparisons[0].reason
+
+
+def test_suppression_pattern_exception_is_recorded_and_rule_still_fires(monkeypatch):
+    blueprint = make_blueprint(
+        blueprint_id="bad_suppression_pattern",
+        observation_rules=[
+            ObservationRule(
+                id="signal",
+                description="The report contains a signal.",
+                patterns=["signal"],
+                suppressed_by=["raise_during_suppression"],
+            )
+        ],
+    )
+    original_search = re.search
+
+    def search_with_failure(pattern, *args, **kwargs):
+        if pattern == "raise_during_suppression":
+            raise RuntimeError("simulated suppression failure")
+        return original_search(pattern, *args, **kwargs)
+
+    monkeypatch.setattr(rule_interpreter_module.re, "search", search_with_failure)
+
+    result = RuleInterpreter().interpret("signal appears.", blueprint)
+
+    assert [observation.id for observation in result.observations] == ["signal"]
+    assert result.suppressed_rule_ids == []
+    assert result.skipped_patterns[0].rule_id == "signal"
+    assert "simulated suppression failure" in result.skipped_patterns[0].reason
+
+
+def test_comparison_does_not_emit_if_either_observation_did_not_fire():
+    result = RuleInterpreter().interpret(
+        "configured port 5433; no listener value was reported",
+        port_comparison_blueprint(),
+    )
+
+    assert [observation.id for observation in result.observations] == [
+        "configured_port"
+    ]
+    assert result.skipped_comparisons == []
+
+
+def test_named_capture_values_are_capped_at_sixty_four_characters():
+    long_value = "x" * 100
+    blueprint = make_blueprint(
+        blueprint_id="capture_limit",
+        observation_rules=[
+            make_observation(
+                "captured_value",
+                "A long captured value.",
+                [r"(?P<value>x{100})"],
+            )
+        ],
+    )
+
+    result = RuleInterpreter().interpret(long_value, blueprint)
+
+    assert result.observations[0].captures == {"value": "x" * 64}
