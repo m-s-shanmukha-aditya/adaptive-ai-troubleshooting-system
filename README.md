@@ -5,6 +5,7 @@ A Python/FastAPI prototype that analyzes technical issue reports and retrieves a
 # Status
 
 work in progress
+The two blueprints in data/blueprints/ are drafts and are not loaded at runtime. Until a blueprint is approved and active, /troubleshoot returns an insufficient-knowledge response.
 
 # How it works
 
