@@ -1,0 +1,9 @@
+faiss-cpu==1.15.1
+fastapi==0.162.2
+numpy==2.5.4
+ollama==0.6.3
+openai==3.48.0
+pydantic==2.14.3
+python-dotenv==1.2.4
+sentence-transformers==6.2.0
+uvicorn==0.54.0
