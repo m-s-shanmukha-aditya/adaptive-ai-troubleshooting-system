@@ -1,0 +1,263 @@
+{
+  "cases": [
+    {
+      "id": "holdout_pg_stopped_log",
+      "output": {
+        "issue": "app wont start. log says: org.postgresql.util.PSQLException: Connection to localhost:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections. i shut postgres down yesterday to free up memory and forgot to start it again",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "reported_detail_1": "Connection to localhost:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections. i shut postgres down yesterday to free u",
+          "reported_detail_2": "localhost"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_pg_port_url",
+      "output": {
+        "issue": "spring.datasource.url=jdbc:postgresql://localhost:5433/shopdb is in my application.properties but pgAdmin shows the server running on 5432. getting connection refused on startup",
+        "conditions": [
+          "connection refused"
+        ],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "Database service or configured port may be unavailable."
+        ],
+        "observations": {
+          "connection_refused": "connection refused",
+          "reported_detail_1": "jdbc:postgresql://localhost:5433/shopdb",
+          "reported_detail_2": "localhost"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_pg_creds_log",
+      "output": {
+        "issue": "Startup fails. HikariPool-1 - Exception during pool initialization. Caused by: org.postgresql.util.PSQLException: FATAL: password authentication failed for user \"appuser\". spring boot 3.2, postgres 16",
+        "conditions": [
+          "password authentication"
+        ],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "Authentication failed; verify the configured credentials securely."
+        ],
+        "observations": {
+          "authentication_failed": "password authentication",
+          "reported_detail_1": "FATAL: password authentication failed for user",
+          "reported_detail_2": "3.2",
+          "authentication_failure": "password_authentication_failed"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_pg_wrong_db_typo",
+      "output": {
+        "issue": "psql says database \"inventry\" does not exist. i think i misspelled it in the url, spring boot dies on startup with the same error",
+        "conditions": [
+          "does not exist"
+        ],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot"
+        },
+        "likely_causes": [
+          "The configured database name may not exist."
+        ],
+        "observations": {
+          "database_not_found": "does not exist"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_pg_unknown_host_compose",
+      "output": {
+        "issue": "docker compose: my spring service cant find the db container. java.net.UnknownHostException: postgres-db. url is jdbc:postgresql://postgres-db:5432/orders",
+        "conditions": [
+          "unknownhost"
+        ],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "The configured hostname did not resolve."
+        ],
+        "observations": {
+          "hostname_unresolved": "unknownhost",
+          "reported_detail_1": "postgres-db. url is jdbc:postgresql://postgres-db:5432/orders",
+          "reported_detail_2": "jdbc:postgresql://postgres-db:5432/orders"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_pg_timeout_vpn",
+      "output": {
+        "issue": "connecting to the staging postgres keeps timing out, only when im on the vpn. spring boot hikari: Connection is not available, request timed out after 30000ms",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_pg_success_confirm",
+      "output": {
+        "issue": "ok update, fixed the port in the config and spring boot connects to postgres fine now, tables got created. thanks",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_pg_two_problems",
+      "output": {
+        "issue": "two things going on. postgres service seems to be running (checked services.msc). but spring boot says password authentication failed for user postgres AND my datasource is on 5433 while pg is on 5432. not sure which one is the real cause",
+        "conditions": [
+          "password authentication"
+        ],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "Authentication failed; verify the configured credentials securely."
+        ],
+        "observations": {
+          "authentication_failed": "password authentication",
+          "authentication_failure": "password_authentication_failed"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_pg_service_negated",
+      "output": {
+        "issue": "PostgreSQL is definitely not stopped, pg_isready says accepting connections, but the spring boot app still cant connect and i dont know why",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_vague_db",
+      "output": {
+        "issue": "cant connect to the db after restart pls help urgent",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_docker_bind_port",
+      "output": {
+        "issue": "docker compose up fails: Error response from daemon: driver failed programming external connectivity. Bind for 0.0.0.0:3000 failed: port is already allocated",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {
+          "reported_detail_1": "0.0.0.0"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_nginx_upstream_refused",
+      "output": {
+        "issue": "nginx gives 502 in the browser. error.log: connect() failed (111: Connection refused) while connecting to upstream, upstream: \"http://127.0.0.1:5000/\"",
+        "conditions": [
+          "connection refused"
+        ],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [
+          "Database service or configured port may be unavailable."
+        ],
+        "observations": {
+          "connection_refused": "connection refused",
+          "reported_detail_1": "connect() failed (111: Connection refused) while connecting to upstream, upstream:",
+          "reported_detail_2": "http://127.0.0.1:5000/\"",
+          "reported_detail_3": "127.0.0.1"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_python_traceback",
+      "output": {
+        "issue": "Traceback (most recent call last):\n  File \"app.py\", line 3, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\nbut i already did pip install requests",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {
+          "reported_detail_1": "No module named"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "holdout_disk_npm",
+      "output": {
+        "issue": "npm install fails with ENOSPC: no space left on device, df -h shows / at 100%",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    }
+  ]
+}

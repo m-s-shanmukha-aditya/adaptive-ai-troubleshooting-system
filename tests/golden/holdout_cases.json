@@ -1,0 +1,60 @@
+{
+  "cases": [
+    {
+      "id": "holdout_pg_stopped_log",
+      "issue": "app wont start. log says: org.postgresql.util.PSQLException: Connection to localhost:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections. i shut postgres down yesterday to free up memory and forgot to start it again"
+    },
+    {
+      "id": "holdout_pg_port_url",
+      "issue": "spring.datasource.url=jdbc:postgresql://localhost:5433/shopdb is in my application.properties but pgAdmin shows the server running on 5432. getting connection refused on startup"
+    },
+    {
+      "id": "holdout_pg_creds_log",
+      "issue": "Startup fails. HikariPool-1 - Exception during pool initialization. Caused by: org.postgresql.util.PSQLException: FATAL: password authentication failed for user \"appuser\". spring boot 3.2, postgres 16"
+    },
+    {
+      "id": "holdout_pg_wrong_db_typo",
+      "issue": "psql says database \"inventry\" does not exist. i think i misspelled it in the url, spring boot dies on startup with the same error"
+    },
+    {
+      "id": "holdout_pg_unknown_host_compose",
+      "issue": "docker compose: my spring service cant find the db container. java.net.UnknownHostException: postgres-db. url is jdbc:postgresql://postgres-db:5432/orders"
+    },
+    {
+      "id": "holdout_pg_timeout_vpn",
+      "issue": "connecting to the staging postgres keeps timing out, only when im on the vpn. spring boot hikari: Connection is not available, request timed out after 30000ms"
+    },
+    {
+      "id": "holdout_pg_success_confirm",
+      "issue": "ok update, fixed the port in the config and spring boot connects to postgres fine now, tables got created. thanks"
+    },
+    {
+      "id": "holdout_pg_two_problems",
+      "issue": "two things going on. postgres service seems to be running (checked services.msc). but spring boot says password authentication failed for user postgres AND my datasource is on 5433 while pg is on 5432. not sure which one is the real cause"
+    },
+    {
+      "id": "holdout_pg_service_negated",
+      "issue": "PostgreSQL is definitely not stopped, pg_isready says accepting connections, but the spring boot app still cant connect and i dont know why"
+    },
+    {
+      "id": "holdout_vague_db",
+      "issue": "cant connect to the db after restart pls help urgent"
+    },
+    {
+      "id": "holdout_docker_bind_port",
+      "issue": "docker compose up fails: Error response from daemon: driver failed programming external connectivity. Bind for 0.0.0.0:3000 failed: port is already allocated"
+    },
+    {
+      "id": "holdout_nginx_upstream_refused",
+      "issue": "nginx gives 502 in the browser. error.log: connect() failed (111: Connection refused) while connecting to upstream, upstream: \"http://127.0.0.1:5000/\""
+    },
+    {
+      "id": "holdout_python_traceback",
+      "issue": "Traceback (most recent call last):\n  File \"app.py\", line 3, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\nbut i already did pip install requests"
+    },
+    {
+      "id": "holdout_disk_npm",
+      "issue": "npm install fails with ENOSPC: no space left on device, df -h shows / at 100%"
+    }
+  ]
+}
