@@ -16,6 +16,12 @@ GOLDEN_DIR = Path(__file__).parent / "golden"
 CASES = json.loads(
     (GOLDEN_DIR / "holdout_cases.json").read_text(encoding="utf-8")
 )["cases"]
+TRUTH = {
+    case["id"]: set(case["observations"])
+    for case in json.loads(
+        (GOLDEN_DIR / "holdout_truth.json").read_text(encoding="utf-8")
+    )["cases"]
+}
 EXPECTED_OUTPUTS = {
     case["id"]: case["output"]
     for case in json.loads(
@@ -23,81 +29,79 @@ EXPECTED_OUTPUTS = {
     )["cases"]
 }
 
-KNOWN_HOLDOUT_DIFFERENCES = {
-    "holdout_pg_stopped_log": {
-        "missing": {"reported_detail_1", "reported_detail_2"},
-        "extra": set(),
-        "reason": "The analyzer extracts generic log details that are not PostgreSQL rules.",
-    },
-    "holdout_pg_port_url": {
-        "missing": {
-            "connection_refused",
-            "reported_detail_1",
-            "reported_detail_2",
-        },
-        "extra": set(),
-        "reason": "The fixture lacks this refusal phrasing and generic log-detail extraction.",
-    },
-    "holdout_pg_creds_log": {
-        "missing": {"reported_detail_1", "reported_detail_2"},
-        "extra": set(),
-        "reason": "The analyzer additionally extracts generic log details.",
-    },
-    "holdout_pg_unknown_host_compose": {
-        "missing": {"reported_detail_1", "reported_detail_2"},
-        "extra": set(),
-        "reason": "The analyzer additionally extracts generic log details.",
-    },
-    "holdout_docker_bind_port": {
-        "missing": {"reported_detail_1"},
-        "extra": set(),
-        "reason": "The analyzer extracts a generic daemon error detail, not PostgreSQL knowledge.",
-    },
-    "holdout_nginx_upstream_refused": {
-        "missing": {
-            "connection_refused",
-            "reported_detail_1",
-            "reported_detail_2",
-            "reported_detail_3",
-        },
-        "extra": set(),
-        "reason": "The old analyzer emits generic refusal/detail IDs for this non-database report.",
-    },
-    "holdout_python_traceback": {
-        "missing": {"reported_detail_1"},
-        "extra": set(),
-        "reason": "The analyzer extracts a generic traceback detail, not PostgreSQL knowledge.",
-    },
-}
+TRUTH_KNOWN_MISSES = {}
 
 
 def test_recorded_holdout_outputs_match_current_analyzer():
     analyzer = IssueAnalyzer()
 
     assert set(EXPECTED_OUTPUTS) == {case["id"] for case in CASES}
+    assert set(TRUTH) == {case["id"] for case in CASES}
+    assert len(CASES) == 14
     for case in CASES:
         output = analyzer.analyze(case["issue"]).model_dump(mode="json")
         assert output == EXPECTED_OUTPUTS[case["id"]], case["id"]
 
 
-def test_holdout_differences_match_the_recorded_set():
+def test_rule_fixture_matches_hand_labeled_truth():
     interpreter = RuleInterpreter()
     blueprint = build_postgres_rules_blueprint()
-    seen_differences = set()
+    seen_known_misses = set()
 
     for case in CASES:
-        old_ids = set(EXPECTED_OUTPUTS[case["id"]]["observations"])
         result = interpreter.interpret(case["issue"], blueprint)
         new_ids = {observation.id for observation in result.observations}
-        missing = old_ids - new_ids
-        extra = new_ids - old_ids
+        missing = TRUTH[case["id"]] - new_ids
+        extra = new_ids - TRUTH[case["id"]]
 
-        if case["id"] in KNOWN_HOLDOUT_DIFFERENCES:
-            expected = KNOWN_HOLDOUT_DIFFERENCES[case["id"]]
-            assert missing == expected["missing"], expected["reason"]
-            assert extra == expected["extra"], expected["reason"]
-            seen_differences.add(case["id"])
+        if case["id"] in TRUTH_KNOWN_MISSES:
+            assert missing == TRUTH_KNOWN_MISSES[case["id"]], case["id"]
+            assert extra == set(), case["id"]
+            seen_known_misses.add(case["id"])
         else:
-            assert new_ids == old_ids, case["id"]
+            assert new_ids == TRUTH[case["id"]], case["id"]
 
-    assert seen_differences == set(KNOWN_HOLDOUT_DIFFERENCES)
+    assert seen_known_misses == set(TRUTH_KNOWN_MISSES)
+
+
+def test_service_state_ids_distinguish_stopped_and_running():
+    interpreter = RuleInterpreter()
+    blueprint = build_postgres_rules_blueprint()
+    expected_ids = {
+        "holdout_pg_stopped_log": "service_stopped",
+        "holdout_pg_two_problems": "service_running",
+        "holdout_pg_service_negated": "service_running",
+    }
+
+    for case_id, expected_id in expected_ids.items():
+        case = next(case for case in CASES if case["id"] == case_id)
+        observations = {
+            observation.id: observation
+            for observation in interpreter.interpret(case["issue"], blueprint).observations
+        }
+        assert expected_id in observations
+        assert (
+            set(observations) & {"service_stopped", "service_running"}
+        ) == {expected_id}
+
+
+def test_no_postgres_rules_fire_for_heldout_non_database_cases():
+    interpreter = RuleInterpreter()
+    blueprint = build_postgres_rules_blueprint()
+    non_database_cases = [
+        case
+        for case in CASES
+        if not case["id"].startswith("holdout_pg_")
+        and case["id"] != "holdout_vague_db"
+    ]
+    empty_truth_cases = [
+        case for case in CASES if not TRUTH[case["id"]]
+    ]
+
+    assert len(non_database_cases) == 4
+    for case in empty_truth_cases:
+        result = interpreter.interpret(case["issue"], blueprint)
+        assert result.observations == [], case["id"]
+        assert result.matched_rule_ids == [], case["id"]
+        assert result.clarification_questions == [], case["id"]
+        assert result.clarification_rule_ids == [], case["id"]

@@ -1,0 +1,81 @@
+{
+  "cases": [
+    {
+      "id": "holdout_pg_stopped_log",
+      "observations": ["service_stopped"],
+      "note": "The report says PostgreSQL was shut down and not restarted."
+    },
+    {
+      "id": "holdout_pg_port_url",
+      "observations": ["datasource_port", "listener_port", "port_mismatch"],
+      "note": "The JDBC URL uses a different port from the server shown by pgAdmin."
+    },
+    {
+      "id": "holdout_pg_creds_log",
+      "observations": ["authentication_failed", "authentication_failure"],
+      "note": "The PostgreSQL log explicitly reports password authentication failure."
+    },
+    {
+      "id": "holdout_pg_wrong_db_typo",
+      "observations": ["database_not_found"],
+      "note": "psql explicitly reports that the named database does not exist."
+    },
+    {
+      "id": "holdout_pg_unknown_host_compose",
+      "observations": ["hostname_unresolved"],
+      "note": "Java reports UnknownHostException for the database container hostname."
+    },
+    {
+      "id": "holdout_pg_timeout_vpn",
+      "observations": ["connection_timeout"],
+      "note": "The report describes connections timing out on the VPN."
+    },
+    {
+      "id": "holdout_pg_success_confirm",
+      "observations": ["connection_success"],
+      "note": "The user confirms Spring Boot connects and creates tables."
+    },
+    {
+      "id": "holdout_pg_two_problems",
+      "observations": [
+        "service_running",
+        "authentication_failed",
+        "authentication_failure",
+        "datasource_port",
+        "listener_port",
+        "port_mismatch"
+      ],
+      "note": "The report explicitly says the service is running, authentication failed, and the configured and listener ports differ."
+    },
+    {
+      "id": "holdout_pg_service_negated",
+      "observations": ["service_running"],
+      "note": "This label is a judgment call (service is running), based on pg_isready reporting accepting connections."
+    },
+    {
+      "id": "holdout_vague_db",
+      "observations": [],
+      "note": "The report lacks concrete evidence for a specific database observation."
+    },
+    {
+      "id": "holdout_docker_bind_port",
+      "observations": [],
+      "note": "This is a Docker port-allocation issue, not a PostgreSQL observation."
+    },
+    {
+      "id": "holdout_nginx_upstream_refused",
+      "observations": [],
+      "note": "This is an nginx upstream issue and generic refusal details are excluded from domain truth."
+    },
+    {
+      "id": "holdout_python_traceback",
+      "observations": [],
+      "note": "This is a Python import failure, not a PostgreSQL observation."
+    },
+    {
+      "id": "holdout_disk_npm",
+      "observations": [],
+      "note": "This is a disk-capacity failure, not a PostgreSQL observation."
+    }
+  ]
+}

@@ -15,9 +15,29 @@ GOLDEN_DIR = Path(__file__).resolve().parent
 CASES_PATH = GOLDEN_DIR / "analyzer_cases.json"
 EXPECTED_PATH = GOLDEN_DIR / "analyzer_expected.json"
 
+OLD_SERVICE_STATE_TO_RULE_ID = {
+    "stopped": "service_stopped",
+    "running": "service_running",
+}
+INTENTIONAL_DIVERGENCE_CASES = {
+    "pg_bad_credentials_i_think",
+    "redis_connection_refused",
+    "java_out_of_memory",
+}
+
 
 def _format(values: list[str] | set[str]) -> str:
     return ", ".join(sorted(values)) if values else "(none)"
+
+
+def _mapped_old_ids(case_id: str, observations: dict) -> set[str]:
+    old_ids = set(observations)
+    # The recorded analyzer keeps service_state; map by its value for parity only.
+    # Leave intentional-divergence cases literal so their differences remain visible.
+    if "service_state" in old_ids and case_id not in INTENTIONAL_DIVERGENCE_CASES:
+        old_ids.remove("service_state")
+        old_ids.add(OLD_SERVICE_STATE_TO_RULE_ID[observations["service_state"]])
+    return old_ids
 
 
 def _fired_rule_ids(result) -> list[str]:
@@ -41,17 +61,21 @@ def main() -> None:
     comparisons = []
 
     print("Observation parity")
-    print("case id | old analyzer ids | rule ids | missing (old only) | extra (new only)")
+    print(
+        "case id | old analyzer ids (recorded) | old ids (mapped for parity) | "
+        "rule ids | missing | extra"
+    )
     for case in cases:
         case_id = case["id"]
-        old_ids = set(old_outputs[case_id]["observations"])
+        recorded_old_ids = set(old_outputs[case_id]["observations"])
+        old_ids = _mapped_old_ids(case_id, old_outputs[case_id]["observations"])
         interpretation = interpreter.interpret(case["issue"], blueprint)
         new_ids = {observation.id for observation in interpretation.observations}
         missing = old_ids - new_ids
         extra = new_ids - old_ids
         comparisons.append((case_id, missing, extra))
         print(
-            f"{case_id} | {_format(old_ids)} | {_format(new_ids)} | "
+            f"{case_id} | {_format(recorded_old_ids)} | {_format(old_ids)} | {_format(new_ids)} | "
             f"{_format(missing)} | {_format(extra)}"
         )
 

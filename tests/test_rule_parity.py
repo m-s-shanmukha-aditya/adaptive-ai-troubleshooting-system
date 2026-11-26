@@ -41,9 +41,25 @@ INTENTIONAL_DIVERGENCES = {
     },
 }
 
+OLD_SERVICE_STATE_TO_RULE_ID = {
+    "stopped": "service_stopped",
+    "running": "service_running",
+}
+
 
 def _observation_ids(result) -> set[str]:
     return {observation.id for observation in result.observations}
+
+
+def _mapped_old_observation_ids(case_id: str) -> set[str]:
+    observations = OLD_OUTPUTS[case_id]["observations"]
+    old_ids = set(observations)
+    # Keep analyzer recordings unchanged; map its legacy state ID by its recorded value.
+    # Intentional divergences remain literal old-analyzer IDs so those differences stay visible.
+    if "service_state" in old_ids and case_id not in INTENTIONAL_DIVERGENCES:
+        old_ids.remove("service_state")
+        old_ids.add(OLD_SERVICE_STATE_TO_RULE_ID[observations["service_state"]])
+    return old_ids
 
 
 def test_all_case_observation_parity_and_recorded_differences():
@@ -54,7 +70,7 @@ def test_all_case_observation_parity_and_recorded_differences():
 
     for case in CASES:
         case_id = case["id"]
-        old_ids = set(OLD_OUTPUTS[case_id]["observations"])
+        old_ids = _mapped_old_observation_ids(case_id)
         result = interpreter.interpret(case["issue"], blueprint)
         new_ids = _observation_ids(result)
         missing = old_ids - new_ids

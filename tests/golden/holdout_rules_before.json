@@ -1,0 +1,150 @@
+{
+  "cases": [
+    {
+      "id": "holdout_pg_stopped_log",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_pg_port_url",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_pg_creds_log",
+      "observations": [
+        {
+          "id": "authentication_failed",
+          "description": "The report contains the password-authentication phrase.",
+          "polarity": "present",
+          "matched_text": "password authentication",
+          "captures": {},
+          "supports_diagnoses": []
+        },
+        {
+          "id": "authentication_failure",
+          "description": "Password authentication failed without the explicit invalid-credentials claim.",
+          "polarity": "present",
+          "matched_text": "Startup fails. HikariPool-1 - Exception during pool initialization. Caused by: org.postgresql.util.PSQLException: FATAL:",
+          "captures": {},
+          "supports_diagnoses": []
+        }
+      ],
+      "matched_rule_ids": [
+        "authentication_failed",
+        "authentication_failure"
+      ],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_pg_wrong_db_typo",
+      "observations": [
+        {
+          "id": "database_not_found",
+          "description": "The report says that the database does not exist.",
+          "polarity": "present",
+          "matched_text": "does not exist",
+          "captures": {},
+          "supports_diagnoses": []
+        }
+      ],
+      "matched_rule_ids": [
+        "database_not_found"
+      ],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_pg_unknown_host_compose",
+      "observations": [
+        {
+          "id": "hostname_unresolved",
+          "description": "The report contains the unknown-host indicator.",
+          "polarity": "present",
+          "matched_text": "UnknownHost",
+          "captures": {},
+          "supports_diagnoses": []
+        }
+      ],
+      "matched_rule_ids": [
+        "hostname_unresolved"
+      ],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_pg_timeout_vpn",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_pg_success_confirm",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_pg_two_problems",
+      "observations": [
+        {
+          "id": "authentication_failed",
+          "description": "The report contains the password-authentication phrase.",
+          "polarity": "present",
+          "matched_text": "password authentication",
+          "captures": {},
+          "supports_diagnoses": []
+        },
+        {
+          "id": "authentication_failure",
+          "description": "Password authentication failed without the explicit invalid-credentials claim.",
+          "polarity": "present",
+          "matched_text": "two things going on. postgres service seems to be running (checked services.msc). but spring boot says password authenti",
+          "captures": {},
+          "supports_diagnoses": []
+        }
+      ],
+      "matched_rule_ids": [
+        "authentication_failed",
+        "authentication_failure"
+      ],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_pg_service_negated",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_vague_db",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_docker_bind_port",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_nginx_upstream_refused",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_python_traceback",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    },
+    {
+      "id": "holdout_disk_npm",
+      "observations": [],
+      "matched_rule_ids": [],
+      "clarification_questions": []
+    }
+  ]
+}
