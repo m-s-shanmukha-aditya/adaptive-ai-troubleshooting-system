@@ -1,0 +1,79 @@
+{
+  "evaluation_version": "domain-grounded-diagnostic-v3",
+  "model_name": "mistral",
+  "timestamp_utc": "2026-11-19T05:29:03.769056+00:00",
+  "metrics": {
+    "total_scenarios_executed": 5,
+    "diagnosis_accuracy": 1.0,
+    "evidence_id_consistency_rate": 0.6,
+    "action_quality_rate": 0.8,
+    "overall_pass_rate": 0.4
+  },
+  "scenarios": [
+    {
+      "scenario_id": "postgres_service_stopped",
+      "diagnosis_match": true,
+      "evidence_score": 0.0,
+      "evidence_consistent": false,
+      "action_score": 1.0,
+      "action_quality": true,
+      "passed": false,
+      "failure_reason": "expected_evidence_ids_missing",
+      "schema_valid": true,
+      "candidate": "{\n\"schema_version\":\"1\",\n\"diagnosis\":{\n  \"id\":\"postgres_service_stopped\",\n  \"summary\":\"The connection is refused and the PostgreSQL service is stopped, which suggests that the PostgreSQL service might be stopped.\",\n  \"status\":\"supported\"\n},\n\"evidence\":[\n  {\"observation_id\":\"connection\"},\n  {\"observation_id\":\"service\"}\n],\n\"recommended_actions\":[\n  {\"action_id\":\"verify_service_status\"},\n  {\"action_id\":\"start_postgres_service\"}\n],\n\"resolution_claim\":\"unverified\",\n\"follow_up_questions\":[]\n}",
+      "repair_attempts": 2
+    },
+    {
+      "scenario_id": "datasource_port_incorrect",
+      "diagnosis_match": true,
+      "evidence_score": 1.0,
+      "evidence_consistent": true,
+      "action_score": 1.0,
+      "action_quality": true,
+      "passed": true,
+      "failure_reason": null,
+      "schema_valid": true,
+      "candidate": "{\"schema_version\":\"1\",\n\"diagnosis\":{\n  \"id\":\"datasource_port_incorrect\",\n  \"summary\":\"The observed issue indicates that the datasource port differs from the PostgreSQL listener port.\",\n  \"status\":\"supported\"\n},\n\"evidence\":[\n  {\"observation_id\":\"database_lookup\"},\n  {\"observation_id\":\"listener_port\"},\n  {\"observation_id\":\"datasource_port\"}\n],\n\"recommended_actions\":[\n  {\"action_id\":\"align_datasource_port\"}\n],\"resolution_claim\":\"unverified\",\n\"follow_up_questions\":[]}",
+      "repair_attempts": 0
+    },
+    {
+      "scenario_id": "database_credentials_invalid",
+      "diagnosis_match": true,
+      "evidence_score": 0.0,
+      "evidence_consistent": false,
+      "action_score": 1.0,
+      "action_quality": true,
+      "passed": false,
+      "failure_reason": "expected_evidence_ids_missing",
+      "schema_valid": true,
+      "candidate": "{\n\"schema_version\":\"1\",\n\"diagnosis\":{\n  \"id\":\"database_credentials_invalid\",\n  \"summary\":\"The configured database credentials are rejected.\",\n  \"status\":\"supported\"\n},\n\"evidence\":[\n  {\"observation_id\":\"authentication\", \"interpretation\":\"failed\"},\n  {\"observation_id\":\"host_port_database\", \"interpretation\":\"reachable_and_exists\"}\n],\n\"recommended_actions\":[\n  {\"action_id\":\"verify_credentials_securely\"},\n  {\"action_id\":\"rotate_credentials_if_needed\"}\n],\n\"resolution_claim\":\"unverified\",\n\"follow_up_questions\":[]\n}",
+      "repair_attempts": 2
+    },
+    {
+      "scenario_id": "database_name_incorrect",
+      "diagnosis_match": true,
+      "evidence_score": 1.0,
+      "evidence_consistent": true,
+      "action_score": 1.0,
+      "action_quality": true,
+      "passed": true,
+      "failure_reason": null,
+      "schema_valid": true,
+      "candidate": "{\"schema_version\":\"1\",\n\"diagnosis\":{\n  \"id\":\"database_name_incorrect\",\n  \"summary\":\"The configured database name is incorrect or the specified database does not exist on the target server.\",\n  \"status\":\"supported\"\n},\n\"evidence\":[\n  {\"observation_id\":\"database_lookup\"}\n],\n\"recommended_actions\":[\n  {\"action_id\":\"align_database_name\"},\n  {\"action_id\":\"verify_database_exists\"}\n],\n\"resolution_claim\":\"unverified\",\n\"follow_up_questions\":[]}",
+      "repair_attempts": 0
+    },
+    {
+      "scenario_id": "connection_successful",
+      "diagnosis_match": true,
+      "evidence_score": 1.0,
+      "evidence_consistent": true,
+      "action_score": 0.0,
+      "action_quality": false,
+      "passed": false,
+      "failure_reason": "action_quality_failed",
+      "schema_valid": true,
+      "candidate": "{\n\"schema_version\":\"1\",\n\"diagnosis\":{\n  \"id\":\"connection_successful\",\n  \"summary\":\"Connection to PostgreSQL is successful.\",\n  \"status\":\"supported\"\n},\n\"evidence\":[\n  {\"observation_id\":\"connection_result\"},\n  {\"observation_id\":\"database_lookup\"}\n],\n\"recommended_actions\":[],\n\"resolution_claim\":\"unverified\",\n\"follow_up_questions\":[]\n}",
+      "repair_attempts": 1
+    }
+  ]
+}

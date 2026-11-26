@@ -1,0 +1,29 @@
+{
+  "evaluation_kind": "single_out_of_domain_probe",
+  "model": "mistral",
+  "timestamp_utc": "2026-11-19T05:30:36.770579+00:00",
+  "scenario": "Our public endpoint returns error: no healthy upstream targets are registered.",
+  "domain": "web_infrastructure",
+  "observation_ids": [
+    "reported_detail_1"
+  ],
+  "candidate": "{\"schema_version\":\"1\",\n\"diagnosis\":{\n  \"id\":\"gateway_no_healthy_upstream\",\n  \"summary\":\"The gateway reports no healthy upstream targets.\",\n  \"status\":\"supported\"\n},\n\"evidence\":[\n  {\"observation_id\":\"reported_detail_1\",\"interpretation\":\"The reported detail indicates that no healthy upstream targets are registered.\"}\n],\n\"recommended_actions\":[\n  {\"action_id\":\"inspect_upstream_health\"},\n  {\"action_id\":\"verify_gateway_target\"}\n],\n\"resolution_claim\":\"unverified\",\n\"follow_up_questions\":[]\n}",
+  "runtime_validation_passed": true,
+  "runtime_validation_reasons": [],
+  "expected_diagnosis_match": true,
+  "evidence_grounding_ids": [
+    "reported_detail_1"
+  ],
+  "actions": [
+    "inspect_upstream_health",
+    "verify_gateway_target"
+  ],
+  "uncertainty_status": "supported",
+  "clarification_questions": [],
+  "limitations": [
+    "one authored probe",
+    "expected answer is a human-authored label",
+    "not a held-out benchmark",
+    "runtime validation does not prove resolution"
+  ]
+}

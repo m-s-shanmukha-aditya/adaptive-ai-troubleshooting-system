@@ -1,0 +1,79 @@
+{
+  "evaluation_version": "postgres-diagnostic-v2",
+  "model_name": "mistral",
+  "timestamp_utc": "2026-11-12T09:37:19.635268+00:00",
+  "metrics": {
+    "total_scenarios_executed": 5,
+    "diagnosis_accuracy": 0.6,
+    "evidence_id_consistency_rate": 0.4,
+    "action_quality_rate": 0.6,
+    "overall_pass_rate": 0.4
+  },
+  "scenarios": [
+    {
+      "scenario_id": "postgres_service_stopped",
+      "diagnosis_match": false,
+      "evidence_score": 0.0,
+      "evidence_consistent": false,
+      "action_score": 0.0,
+      "action_quality": false,
+      "passed": false,
+      "failure_reason": "malformed_or_invalid_schema;diagnosis_mismatch;expected_evidence_ids_missing;action_quality_failed",
+      "schema_valid": false,
+      "candidate": " Here's the repaired JSON object with the deterministic validation defect fixed:\n\n```json\n{\n  \"schema_version\": \"1\",\n  \"diagnosis\": {\n    \"id\": \"postgres_service_stopped\",\n    \"summary\": \"PostgreSQL service is stopped, causing connection issues.\",\n    \"status\": \"supported\"\n  },\n  \"evidence\": [\n    {\n      \"observation_id\": \"connection\",\n      \"interpretation\": \"The connection result is 'refused', which could indicate that the server is not accepting connections. However, we cannot confirm that it's due to the PostgreSQL service being stopped as opposed to some other network or application issue.\"\n    },\n    {\n      \"observation_id\": \"service\",\n      \"interpretation\": \"The service state is 'stopped'. This observation supports the diagnosis, but we cannot confirm that it's causing the connection issue as there may be other reasons for a refused connection.\"\n    }\n  ],\n  \"recommended_actions\": [\n    {\"action_id\": \"start_postgres_service\", \"description\": \"Start PostgreSQL to enable connections.\"},\n    {\"action_id\": \"verify_datasource_url\", \"description\": \"Inspect the JDBC URL to ensure it includes the correct host, port, and database name.\"},\n    {\"action_id\": \"check_host_reachability\", \"description\": \"Check reachability of the configured database host.\"}\n  ],\n  \"resolution_claim\": \"unverified\",\n  \"follow_up_questions\": [\n    {\n      \"question\": \"Can you provide more context about the network or application status?\",\n      \"rationale\": \"To determine whether the PostgreSQL service being stopped is indeed causing the connection issue.\"\n    }\n  ]\n}\n```",
+      "repair_attempts": 2
+    },
+    {
+      "scenario_id": "datasource_port_incorrect",
+      "diagnosis_match": true,
+      "evidence_score": 1.0,
+      "evidence_consistent": true,
+      "action_score": 1.0,
+      "action_quality": true,
+      "passed": true,
+      "failure_reason": null,
+      "schema_valid": true,
+      "candidate": " {\n  \"schema_version\": \"1\",\n  \"diagnosis\": {\n    \"id\": \"datasource_port_incorrect\",\n    \"summary\": \"The observed datasource port differs from the PostgreSQL listener port.\",\n    \"status\": \"supported\"\n  },\n  \"evidence\": [\n    {\n      \"observation_id\": \"listener_port\",\n      \"interpretation\": \"PostgreSQL is listening on the fixture_listener_port\"\n    },\n    {\n      \"observation_id\": \"datasource_port\",\n      \"interpretation\": \"The datasource uses the fixture_different_port\"\n    }\n  ],\n  \"recommended_actions\": [\n    {\n      \"action_id\": \"align_datasource_port\",\n      \"description\": \"Set datasource port to the confirmed listener port\"\n    },\n    {\n      \"action_id\": \"verify_listener_port\",\n      \"description\": \"Check which port PostgreSQL listens on and whether it is reachable\"\n    }\n  ],\n  \"resolution_claim\": \"unverified\",\n  \"follow_up_questions\": []\n}",
+      "repair_attempts": 0
+    },
+    {
+      "scenario_id": "database_credentials_invalid",
+      "diagnosis_match": true,
+      "evidence_score": 0.0,
+      "evidence_consistent": false,
+      "action_score": 1.0,
+      "action_quality": true,
+      "passed": false,
+      "failure_reason": "expected_evidence_ids_missing",
+      "schema_valid": true,
+      "candidate": " {\n  \"schema_version\": \"1\",\n  \"diagnosis\": {\n    \"id\": \"database_credentials_invalid\",\n    \"summary\": \"Controlled authentication attempt to the existing database on a reachable host failed.\",\n    \"status\": \"supported\"\n  },\n  \"evidence\": [\n    {\n      \"observation_id\": \"host_port_database\",\n      \"interpretation\": \"The host, port, and database exist and are reachable (host_port_database: reachable_and_exists)\"\n    },\n    {\n      \"observation_id\": \"authentication\",\n      \"interpretation\": \"Controlled authentication attempt fails (authentication: failed)\"\n    }\n  ],\n  \"recommended_actions\": [\n    {\"action_id\": \"verify_credentials_securely\"}\n  ],\n  \"resolution_claim\": \"unverified\",\n  \"follow_up_questions\": []\n}",
+      "repair_attempts": 2
+    },
+    {
+      "scenario_id": "database_name_incorrect",
+      "diagnosis_match": true,
+      "evidence_score": 1.0,
+      "evidence_consistent": true,
+      "action_score": 1.0,
+      "action_quality": true,
+      "passed": true,
+      "failure_reason": null,
+      "schema_valid": true,
+      "candidate": " {\n  \"schema_version\": \"1\",\n  \"diagnosis\": {\n    \"id\": \"database_name_incorrect\",\n    \"summary\": \"The configured database name is incorrect or the intended database does not exist.\",\n    \"status\": \"supported\"\n  },\n  \"evidence\": [\n    {\n      \"observation_id\": \"database_lookup\",\n      \"interpretation\": \"The requested database was not found.\"\n    }\n  ],\n  \"recommended_actions\": [\n    {\n      \"action_id\": \"align_database_name\"\n    },\n    {\n      \"action_id\": \"verify_database_exists\"\n    }\n  ],\n  \"resolution_claim\": \"unverified\",\n  \"follow_up_questions\": []\n}",
+      "repair_attempts": 0
+    },
+    {
+      "scenario_id": "connection_successful",
+      "diagnosis_match": false,
+      "evidence_score": 0.0,
+      "evidence_consistent": false,
+      "action_score": 0.0,
+      "action_quality": false,
+      "passed": false,
+      "failure_reason": "malformed_or_invalid_schema;diagnosis_mismatch;expected_evidence_ids_missing;action_quality_failed",
+      "schema_valid": false,
+      "candidate": " Here's a corrected version of your JSON object that also includes the schema version:\n\n```json\n{\n  \"schema_version\": \"1\",\n  \"diagnosis\": {\n    \"id\": \"connection_successful\",\n    \"summary\": \"The connection to the PostgreSQL instance is successful.\",\n    \"status\": \"supported\"\n  },\n  \"evidence\": [\n    {\n      \"observation_id\": \"connection_result\",\n      \"interpretation\": \"The connection succeeds.\"\n    },\n    {\n      \"observation_id\": \"database_lookup\",\n      \"interpretation\": \"The configuration is valid.\"\n    }\n  ],\n  \"recommended_actions\": [],\n  \"resolution_claim\": \"unverified\",\n  \"follow_up_questions\": []\n}\n```\n\nIn this updated JSON object, I replaced the observations with their respective observation IDs from the shared evidence vocabulary and also included the `schema_version`. The schema version is required to ensure compatibility with other systems that may parse or generate this format.",
+      "repair_attempts": 2
+    }
+  ]
+}
