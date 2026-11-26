@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "id": "pg_service_stopped",
+      "issue": "My Spring Boot application cannot connect to PostgreSQL because the PostgreSQL service is stopped."
+    },
+    {
+      "id": "pg_port_mismatch",
+      "issue": "Spring Boot is configured to use port 5433, but PostgreSQL is listening on port 5432."
+    },
+    {
+      "id": "pg_bad_credentials",
+      "issue": "My Spring Boot application reports PostgreSQL password authentication failed; the database username or password is incorrect."
+    },
+    {
+      "id": "pg_wrong_database",
+      "issue": "Spring Boot cannot connect to PostgreSQL because the database does not exist."
+    },
+    {
+      "id": "pg_unknown_hostname",
+      "issue": "Spring Boot cannot connect to PostgreSQL; UnknownHostException reports that db.internal cannot be resolved."
+    },
+    {
+      "id": "pg_vague",
+      "issue": "My Spring Boot application cannot connect to PostgreSQL."
+    },
+    {
+      "id": "pg_connection_successful",
+      "issue": "My Spring Boot application connected successfully to PostgreSQL; the connection succeeds."
+    },
+    {
+      "id": "pg_mixed_signals",
+      "issue": "Spring Boot cannot connect to PostgreSQL. The PostgreSQL service is running, the datasource is configured to use port 5433, PostgreSQL is listening on port 5432, and password authentication failed."
+    },
+    {
+      "id": "docker_port_allocated",
+      "issue": "Docker failed to start a container because port 8080 is already allocated."
+    },
+    {
+      "id": "nginx_502",
+      "issue": "Nginx returns 502 Bad Gateway because the upstream request timed out."
+    },
+    {
+      "id": "maven_build_failure",
+      "issue": "Maven build fails while compiling the application with an unresolved dependency."
+    },
+    {
+      "id": "dns_nxdomain",
+      "issue": "DNS lookup for api.example.test returns NXDOMAIN."
+    },
+    {
+      "id": "disk_full",
+      "issue": "The Linux host reports that the disk is full and cannot write new files."
+    },
+    {
+      "id": "python_module_missing",
+      "issue": "Python exits with ModuleNotFoundError for the package acme_tools."
+    },
+    {
+      "id": "permission_denied",
+      "issue": "A build process fails with permission denied while reading its configuration file."
+    },
+    {
+      "id": "tls_certificate_expired",
+      "issue": "A client reports that the TLS certificate for api.example.test has expired."
+    },
+    {
+      "id": "redis_connection_refused",
+      "issue": "Redis is not running; the application gets connection refused when connecting to port 6379."
+    },
+    {
+      "id": "kubernetes_crashloop",
+      "issue": "A Kubernetes pod repeatedly restarts and enters CrashLoopBackOff after deployment."
+    },
+    {
+      "id": "java_out_of_memory",
+      "issue": "A Java process terminates with OutOfMemoryError: Java heap space."
+    },
+    {
+      "id": "slow_api",
+      "issue": "The API responds slowly and requests take 15 seconds to complete."
+    }
+  ]
+}

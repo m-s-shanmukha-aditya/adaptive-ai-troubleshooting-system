@@ -1,0 +1,349 @@
+{
+  "cases": [
+    {
+      "id": "pg_service_stopped",
+      "output": {
+        "issue": "My Spring Boot application cannot connect to PostgreSQL because the PostgreSQL service is stopped.",
+        "conditions": [],
+        "constraints": [
+          "My Spring Boot application cannot connect to PostgreSQL because the PostgreSQL service is stopped."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "service_state": "stopped"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_port_mismatch",
+      "output": {
+        "issue": "Spring Boot is configured to use port 5433, but PostgreSQL is listening on port 5432.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "datasource_port": "5433",
+          "listener_port": "5432",
+          "port_mismatch": "configured=5433; listener=5432"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_bad_credentials",
+      "output": {
+        "issue": "My Spring Boot application reports PostgreSQL password authentication failed; the database username or password is incorrect.",
+        "conditions": [
+          "password authentication"
+        ],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "Authentication failed; verify the configured credentials securely."
+        ],
+        "observations": {
+          "authentication_failed": "password authentication",
+          "credentials_state": "reported_invalid"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_wrong_database",
+      "output": {
+        "issue": "Spring Boot cannot connect to PostgreSQL because the database does not exist.",
+        "conditions": [
+          "does not exist"
+        ],
+        "constraints": [
+          "Spring Boot cannot connect to PostgreSQL because the database does not exist."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "The configured database name may not exist."
+        ],
+        "observations": {
+          "database_not_found": "does not exist"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "pg_unknown_hostname",
+      "output": {
+        "issue": "Spring Boot cannot connect to PostgreSQL; UnknownHostException reports that db.internal cannot be resolved.",
+        "conditions": [
+          "unknownhost"
+        ],
+        "constraints": [
+          "Spring Boot cannot connect to PostgreSQL; UnknownHostException reports that db.internal cannot be resolved."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "The configured hostname did not resolve."
+        ],
+        "observations": {
+          "hostname_unresolved": "unknownhost"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "pg_vague",
+      "output": {
+        "issue": "My Spring Boot application cannot connect to PostgreSQL.",
+        "conditions": [],
+        "constraints": [
+          "My Spring Boot application cannot connect to PostgreSQL."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "pg_connection_successful",
+      "output": {
+        "issue": "My Spring Boot application connected successfully to PostgreSQL; the connection succeeds.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "connection_success": "reported"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "pg_mixed_signals",
+      "output": {
+        "issue": "Spring Boot cannot connect to PostgreSQL. The PostgreSQL service is running, the datasource is configured to use port 5433, PostgreSQL is listening on port 5432, and password authentication failed.",
+        "conditions": [
+          "password authentication"
+        ],
+        "constraints": [
+          "Spring Boot cannot connect to PostgreSQL. The PostgreSQL service is running, the datasource is configured to use port 5433, PostgreSQL is listening on port 5432, and password authentication failed."
+        ],
+        "environment": {
+          "framework": "Spring Boot",
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "Authentication failed; verify the configured credentials securely."
+        ],
+        "observations": {
+          "authentication_failed": "password authentication",
+          "datasource_port": "5433",
+          "listener_port": "5432",
+          "port_mismatch": "configured=5433; listener=5432",
+          "service_state": "running",
+          "authentication_failure": "password_authentication_failed"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "docker_port_allocated",
+      "output": {
+        "issue": "Docker failed to start a container because port 8080 is already allocated.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "nginx_502",
+      "output": {
+        "issue": "Nginx returns 502 Bad Gateway because the upstream request timed out.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "maven_build_failure",
+      "output": {
+        "issue": "Maven build fails while compiling the application with an unresolved dependency.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "dns_nxdomain",
+      "output": {
+        "issue": "DNS lookup for api.example.test returns NXDOMAIN.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "disk_full",
+      "output": {
+        "issue": "The Linux host reports that the disk is full and cannot write new files.",
+        "conditions": [],
+        "constraints": [
+          "The Linux host reports that the disk is full and cannot write new files."
+        ],
+        "environment": {
+          "operating_system": "Linux"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "python_module_missing",
+      "output": {
+        "issue": "Python exits with ModuleNotFoundError for the package acme_tools.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "permission_denied",
+      "output": {
+        "issue": "A build process fails with permission denied while reading its configuration file.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "tls_certificate_expired",
+      "output": {
+        "issue": "A client reports that the TLS certificate for api.example.test has expired.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "redis_connection_refused",
+      "output": {
+        "issue": "Redis is not running; the application gets connection refused when connecting to port 6379.",
+        "conditions": [
+          "connection refused"
+        ],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [
+          "Database service or configured port may be unavailable."
+        ],
+        "observations": {
+          "connection_refused": "connection refused",
+          "service_state": "stopped"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "kubernetes_crashloop",
+      "output": {
+        "issue": "A Kubernetes pod repeatedly restarts and enters CrashLoopBackOff after deployment.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "java_out_of_memory",
+      "output": {
+        "issue": "A Java process terminates with OutOfMemoryError: Java heap space.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {
+          "reported_detail_1": "Java heap space."
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "slow_api",
+      "output": {
+        "issue": "The API responds slowly and requests take 15 seconds to complete.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    }
+  ]
+}
