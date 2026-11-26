@@ -1,0 +1,113 @@
+{
+  "note": "Fresh held-out set. Labels are domain observation ids only (service_stopped, service_running, datasource_port, listener_port, port_mismatch, credentials_state, database_not_found, hostname_unresolved, connection_timeout, connection_success). Generic ids (reported_detail_N, connection_refused) are not scored. Hedged claims are labelled empty on purpose.",
+  "cases": [
+    {
+      "id": "v2_pg_never_started",
+      "issue": "Installed postgres on my new laptop but never started the service, so the spring app gets connection refused on startup.",
+      "truth": ["service_stopped"],
+      "note": "definite stopped state"
+    },
+    {
+      "id": "v2_pg_crashed",
+      "issue": "postgres crashed overnight (OOM killer), the service is down. the app throws PSQLException on every request",
+      "truth": ["service_stopped"],
+      "note": "crashed/down phrasing"
+    },
+    {
+      "id": "v2_pg_running_only",
+      "issue": "the postgres service is up and healthy, pg_isready says ok, but spring still cant connect and nobody knows why",
+      "truth": ["service_running"],
+      "note": "running evidence only"
+    },
+    {
+      "id": "v2_pg_port_mismatch",
+      "issue": "Our app.yml has url: jdbc:postgresql://10.0.2.15:5434/billing. The DBA says the postgres server is listening on 5432.",
+      "truth": ["datasource_port", "listener_port", "port_mismatch"],
+      "note": "URL port vs reported listener port"
+    },
+    {
+      "id": "v2_pg_port_equal",
+      "issue": "datasource port is 5432 and postgres listens on 5432, so the ports match, but we still get refused connections",
+      "truth": ["datasource_port", "listener_port"],
+      "note": "equal ports: no mismatch expected"
+    },
+    {
+      "id": "v2_pg_wrong_db",
+      "issue": "FATAL: database \"orders_prod\" does not exist. we renamed it to orders last week and forgot the config",
+      "truth": ["database_not_found"],
+      "note": "database missing"
+    },
+    {
+      "id": "v2_pg_unknown_host",
+      "issue": "java.net.UnknownHostException: pgprimary.corp.local. works from my laptop, not from inside the container",
+      "truth": ["hostname_unresolved"],
+      "note": "host resolution"
+    },
+    {
+      "id": "v2_pg_timeout",
+      "issue": "postgres connection hangs for a while and then fails with java.net.SocketTimeoutException: connect timed out",
+      "truth": ["connection_timeout"],
+      "note": "timeout phrasing"
+    },
+    {
+      "id": "v2_pg_success",
+      "issue": "Good news, the spring boot app now connects to postgres and the flyway migrations ran",
+      "truth": ["connection_success"],
+      "note": "casual success"
+    },
+    {
+      "id": "v2_pg_creds_definite",
+      "issue": "Wrong password for the postgres user in application.properties, i just checked, it is an old one",
+      "truth": ["credentials_state"],
+      "note": "definite credential claim"
+    },
+    {
+      "id": "v2_pg_creds_hedged",
+      "issue": "might be a postgres password problem, not sure, spring boot wont connect",
+      "truth": [],
+      "note": "hedged claim must not assert credentials"
+    },
+    {
+      "id": "v2_pg_two_problems",
+      "issue": "postgres service is stopped, and once we start it we will still hit UnknownHostException because the host in the url is wrong",
+      "truth": ["service_stopped", "hostname_unresolved"],
+      "note": "two independent signals"
+    },
+    {
+      "id": "v2_pg_vague",
+      "issue": "database error in prod pls fix",
+      "truth": [],
+      "note": "too vague to assert anything"
+    },
+    {
+      "id": "v2_k8s_imagepull",
+      "issue": "pod stuck in ImagePullBackOff, kubectl describe says failed to pull image registry.example.test/app:1.4",
+      "truth": [],
+      "note": "non-database"
+    },
+    {
+      "id": "v2_mysql_access_denied",
+      "issue": "MySQL says Access denied for user 'root'@'localhost' (using password: YES) after we rotated the password",
+      "truth": [],
+      "note": "credential words in another database; postgres rules should stay silent"
+    },
+    {
+      "id": "v2_redis_stopped",
+      "issue": "the redis service is not running on the cache host and the app logs connection errors",
+      "truth": [],
+      "note": "domain trap: stopped-service phrasing for another product. A failure here is a finding, not necessarily a bug, because retrieval normally gates domains"
+    },
+    {
+      "id": "v2_git_push_rejected",
+      "issue": "git push is rejected: non-fast-forward, updates were rejected because the remote contains work that i do not have locally",
+      "truth": [],
+      "note": "non-database"
+    },
+    {
+      "id": "v2_tls_handshake",
+      "issue": "curl to the internal api fails with SSL certificate problem: unable to get local issuer certificate",
+      "truth": [],
+      "note": "non-database"
+    }
+  ]
+}
