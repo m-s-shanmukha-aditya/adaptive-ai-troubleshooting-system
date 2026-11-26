@@ -13,8 +13,9 @@ from app.services.blueprint_loader import load_blueprints
 EXISTING_BLUEPRINT_HASHES = {
     "HTTP Gateway 502 and Unhealthy Upstream":
         "300a18e62d37f73fe76f34d3d252369011951b43b4c980d3308c6184e5edc1bf",
+    # Intentional: the PostgreSQL blueprint now includes serialized analysis rules.
     "Spring Boot PostgreSQL Connection Failure":
-        "c3f58a6aa712a2af5662084859a4970bba6c049dbfe7c5a80227bd14c0a5710a",
+        "0fbec19002a217aaae7c08673a50a4732a56a0b3b5e4bb1fd92e3a39db8d90c0",
 }
 
 
@@ -352,7 +353,7 @@ def test_blueprint_rejects_more_than_twenty_clarification_rules():
         make_blueprint(clarification_rules=rules)
 
 
-def test_existing_blueprints_load_and_preserve_pre_schema_content_hashes():
+def test_existing_blueprints_load_and_match_expected_content_hashes():
     loaded_hashes = {
         blueprint.title: blueprint.content_hash()
         for blueprint in load_blueprints()

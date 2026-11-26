@@ -106,6 +106,64 @@ def test_listener_port_server_phrases_and_non_database_near_miss():
     assert "listener_port" not in observations_by_id(interpret(near_miss))
 
 
+def test_datasource_db_and_app_port_declarations_and_near_misses():
+    reports = [
+        "PostgreSQL datasource port is 5701 for the billing service.",
+        "The PostgreSQL db port is 5702 during staging.",
+        "Our PostgreSQL app port is 5703 for the reporting client.",
+    ]
+    for report, expected_port in zip(reports, ("5701", "5702", "5703")):
+        observation = observations_by_id(interpret(report)).get("datasource_port")
+        assert observation is not None, report
+        assert observation.captures["port"] == expected_port
+
+    near_misses = [
+        "MySQL db port is 3306.",
+        "Redis app port is 6379.",
+        "PostgreSQL app port has not been configured.",
+    ]
+    for report in near_misses:
+        assert "datasource_port" not in observations_by_id(interpret(report)), report
+
+
+def test_postgres_server_listens_on_or_at_port_and_near_misses():
+    reports = [
+        "The PostgreSQL server listens on 5801 during tests.",
+        "Postgres listens at 5802 for the local instance.",
+        "PostgreSQL is the selected engine, and the server listens at port 5803.",
+    ]
+    for report, expected_port in zip(reports, ("5801", "5802", "5803")):
+        observation = observations_by_id(interpret(report)).get("listener_port")
+        assert observation is not None, report
+        assert observation.captures["port"] == expected_port
+
+    near_misses = [
+        "MySQL server listens on 3306.",
+        "Redis server listens at 6379.",
+        "PostgreSQL cannot connect to port 5432.",
+    ]
+    for report in near_misses:
+        assert "listener_port" not in observations_by_id(interpret(report)), report
+
+
+def test_app_connection_success_families_and_near_misses():
+    reports = [
+        "The Spring Boot app now connects to PostgreSQL after the config reload.",
+        "Our app now connected to postgres after the service restart.",
+        "The app connects fine now to PostgreSQL from the worker.",
+    ]
+    for report in reports:
+        assert "connection_success" in observations_by_id(interpret(report)), report
+
+    near_misses = [
+        "The MySQL app now connects to MySQL after the update.",
+        "The Redis app now connected to Redis after the restart.",
+        "The app does not connect to PostgreSQL after the config change.",
+    ]
+    for report in near_misses:
+        assert "connection_success" not in observations_by_id(interpret(report)), report
+
+
 def test_jdbc_port_comparison_fires_in_either_text_order():
     reports = [
         "URL jdbc:postgresql://node-a:5630/stock; pgAdmin says the server is listening on port 5631.",

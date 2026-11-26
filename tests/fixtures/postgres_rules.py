@@ -64,17 +64,19 @@ def build_postgres_rules_blueprint() -> ProceduralBlueprint:
                     r"\bconfigured\s+to\s+use\s+port\s+(?P<port>\d{1,5})\b",
                     r"\bdatasource(?:\s+URL)?\s+uses?\s+port\s+(?P<port>\d{1,5})\b",
                     r"\bdatasource\s+(?:is\s+)?on\s+(?P<port>\d{1,5})\b",
+                    # Covers explicit datasource, DB, and app port declarations in PostgreSQL reports.
+                    r"\A(?=[\s\S]*\bpostgres(?:ql)?\b)[\s\S]*?\b(?:datasource|db|app)\s+port\s+(?:is|=)\s*(?P<port>\d{1,5})\b",
                 ],
             ),
-            # Covers PostgreSQL and pgAdmin statements that identify the listener port.
+            # Covers PostgreSQL and pgAdmin listener-port statements, including "listens on/at".
             ObservationRule(
                 id="listener_port",
                 description="The report states a PostgreSQL listener port.",
                 patterns=[
-                    r"\bpostgres(?:ql)?\s+is\s+listening\s+on\s+port\s+(?P<port>\d{1,5})\b",
+                    r"\bpostgres(?:ql)?\s+(?:server\s+)?(?:is\s+)?(?:listening|listens?)\s+(?:on|at)\s+(?:port\s+)?(?P<port>\d{1,5})\b",
                     r"\bpostgres(?:ql)?\s+listening\s+on\s+port\s+(?P<port>\d{1,5})\b",
                     r"\bpostgres(?:ql)?\s+server\s+is\s+listening\s+on\s+port\s+(?P<port>\d{1,5})\b",
-                    r"\b(?:postgres(?:ql)?|pgadmin)\b[^.;\n]{0,80}\bserver\s+(?:is\s+)?(?:running\s+on|listening\s+on|on)\s+(?:port\s+)?(?P<port>\d{1,5})\b",
+                    r"\b(?:postgres(?:ql)?|pgadmin)\b[^.;\n]{0,80}\bserver\s+(?:(?:is\s+)?(?:running\s+on|listening\s+on|on)|listens?\s+(?:on|at))\s+(?:port\s+)?(?P<port>\d{1,5})\b",
                     r"\bpg\s+(?:is\s+)?on\s+(?:port\s+)?(?P<port>\d{1,5})\b",
                 ],
             ),
@@ -136,6 +138,10 @@ def build_postgres_rules_blueprint() -> ProceduralBlueprint:
                     r"\bconnection succeeds\b",
                     r"\b(?:postgres(?:ql)?|database|db)\b[^.!?\n]{0,60}\b(?:works?|working)\s+now\b",
                     r"\b(?:spring(?:\s+boot)?|application|app|postgres(?:ql)?)\b[^.!?\n]{0,80}\bconnects?\s+(?:to\s+(?:postgres(?:ql)?|the\s+database)\s+)?fine\b",
+                    # Covers an app now connecting or newly connected to PostgreSQL.
+                    r"\A(?=[\s\S]*\bpostgres(?:ql)?\b)[\s\S]*?\b(?:spring\s+boot\s+)?app\s+now\s+connect(?:s|ed)\s+to\s+postgres(?:ql)?\b",
+                    # Covers apps that connect fine now to PostgreSQL.
+                    r"\A(?=[\s\S]*\bpostgres(?:ql)?\b)[\s\S]*?\b(?:spring\s+boot\s+)?app\s+connects?\s+fine\s+now\b",
                 ],
             ),
             # Covers timeout nouns and both common "timed out" and "timing out" forms.

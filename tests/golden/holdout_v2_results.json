@@ -1,9 +1,14 @@
 {
+  "status": "retrained: v2 used for rule fixes; not a held-out score",
   "cases": [
     {
       "id": "v2_pg_never_started",
-      "truth": ["service_stopped"],
-      "emitted": ["service_stopped"],
+      "truth": [
+        "service_stopped"
+      ],
+      "emitted": [
+        "service_stopped"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -12,8 +17,12 @@
     },
     {
       "id": "v2_pg_crashed",
-      "truth": ["service_stopped"],
-      "emitted": ["service_stopped"],
+      "truth": [
+        "service_stopped"
+      ],
+      "emitted": [
+        "service_stopped"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -22,8 +31,12 @@
     },
     {
       "id": "v2_pg_running_only",
-      "truth": ["service_running"],
-      "emitted": ["service_running"],
+      "truth": [
+        "service_running"
+      ],
+      "emitted": [
+        "service_running"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -32,8 +45,16 @@
     },
     {
       "id": "v2_pg_port_mismatch",
-      "truth": ["datasource_port", "listener_port", "port_mismatch"],
-      "emitted": ["datasource_port", "listener_port", "port_mismatch"],
+      "truth": [
+        "datasource_port",
+        "listener_port",
+        "port_mismatch"
+      ],
+      "emitted": [
+        "datasource_port",
+        "listener_port",
+        "port_mismatch"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -44,16 +65,29 @@
     },
     {
       "id": "v2_pg_port_equal",
-      "truth": ["datasource_port", "listener_port"],
-      "emitted": [],
-      "missing": ["datasource_port", "listener_port"],
+      "truth": [
+        "datasource_port",
+        "listener_port"
+      ],
+      "emitted": [
+        "datasource_port",
+        "listener_port"
+      ],
+      "missing": [],
       "extra": [],
-      "matched_text": {}
+      "matched_text": {
+        "datasource_port": "datasource port is 5432",
+        "listener_port": "postgres listens on 5432"
+      }
     },
     {
       "id": "v2_pg_wrong_db",
-      "truth": ["database_not_found"],
-      "emitted": ["database_not_found"],
+      "truth": [
+        "database_not_found"
+      ],
+      "emitted": [
+        "database_not_found"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -62,8 +96,12 @@
     },
     {
       "id": "v2_pg_unknown_host",
-      "truth": ["hostname_unresolved"],
-      "emitted": ["hostname_unresolved"],
+      "truth": [
+        "hostname_unresolved"
+      ],
+      "emitted": [
+        "hostname_unresolved"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -72,8 +110,12 @@
     },
     {
       "id": "v2_pg_timeout",
-      "truth": ["connection_timeout"],
-      "emitted": ["connection_timeout"],
+      "truth": [
+        "connection_timeout"
+      ],
+      "emitted": [
+        "connection_timeout"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -82,16 +124,26 @@
     },
     {
       "id": "v2_pg_success",
-      "truth": ["connection_success"],
-      "emitted": [],
-      "missing": ["connection_success"],
+      "truth": [
+        "connection_success"
+      ],
+      "emitted": [
+        "connection_success"
+      ],
+      "missing": [],
       "extra": [],
-      "matched_text": {}
+      "matched_text": {
+        "connection_success": "Good news, the spring boot app now connects to postgres"
+      }
     },
     {
       "id": "v2_pg_creds_definite",
-      "truth": ["credentials_state"],
-      "emitted": ["credentials_state"],
+      "truth": [
+        "credentials_state"
+      ],
+      "emitted": [
+        "credentials_state"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -108,8 +160,14 @@
     },
     {
       "id": "v2_pg_two_problems",
-      "truth": ["hostname_unresolved", "service_stopped"],
-      "emitted": ["hostname_unresolved", "service_stopped"],
+      "truth": [
+        "hostname_unresolved",
+        "service_stopped"
+      ],
+      "emitted": [
+        "hostname_unresolved",
+        "service_stopped"
+      ],
       "missing": [],
       "extra": [],
       "matched_text": {
@@ -169,19 +227,19 @@
   "totals": {
     "all": {
       "case_count": 18,
-      "tp": 12,
+      "tp": 15,
       "fp": 0,
-      "fn": 3,
+      "fn": 0,
       "precision": 1.0,
-      "recall": 0.8
+      "recall": 1.0
     },
     "postgresql": {
       "case_count": 13,
-      "tp": 12,
+      "tp": 15,
       "fp": 0,
-      "fn": 3,
+      "fn": 0,
       "precision": 1.0,
-      "recall": 0.8
+      "recall": 1.0
     },
     "non_database": {
       "case_count": 5,

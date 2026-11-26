@@ -1,0 +1,195 @@
+{
+  "cases": [
+    {
+      "id": "v2_pg_never_started",
+      "truth": ["service_stopped"],
+      "emitted": ["service_stopped"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "service_stopped": "postgres on my new laptop but never started"
+      }
+    },
+    {
+      "id": "v2_pg_crashed",
+      "truth": ["service_stopped"],
+      "emitted": ["service_stopped"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "service_stopped": "postgres crashed overnight (OOM killer), the service is down"
+      }
+    },
+    {
+      "id": "v2_pg_running_only",
+      "truth": ["service_running"],
+      "emitted": ["service_running"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "service_running": "postgres service is up"
+      }
+    },
+    {
+      "id": "v2_pg_port_mismatch",
+      "truth": ["datasource_port", "listener_port", "port_mismatch"],
+      "emitted": ["datasource_port", "listener_port", "port_mismatch"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "datasource_port": "Our app.yml has url: jdbc:postgresql://10.0.2.15:5434",
+        "listener_port": "postgres server is listening on 5432",
+        "port_mismatch": "5434 not_equal 5432"
+      }
+    },
+    {
+      "id": "v2_pg_port_equal",
+      "truth": ["datasource_port", "listener_port"],
+      "emitted": [],
+      "missing": ["datasource_port", "listener_port"],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v2_pg_wrong_db",
+      "truth": ["database_not_found"],
+      "emitted": ["database_not_found"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "database_not_found": "does not exist"
+      }
+    },
+    {
+      "id": "v2_pg_unknown_host",
+      "truth": ["hostname_unresolved"],
+      "emitted": ["hostname_unresolved"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "hostname_unresolved": "UnknownHost"
+      }
+    },
+    {
+      "id": "v2_pg_timeout",
+      "truth": ["connection_timeout"],
+      "emitted": ["connection_timeout"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "connection_timeout": "postgres connection hangs for a while and then fails with java.net.SocketTimeoutException: connect timed out"
+      }
+    },
+    {
+      "id": "v2_pg_success",
+      "truth": ["connection_success"],
+      "emitted": [],
+      "missing": ["connection_success"],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v2_pg_creds_definite",
+      "truth": ["credentials_state"],
+      "emitted": ["credentials_state"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "credentials_state": "Wrong password"
+      }
+    },
+    {
+      "id": "v2_pg_creds_hedged",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v2_pg_two_problems",
+      "truth": ["hostname_unresolved", "service_stopped"],
+      "emitted": ["hostname_unresolved", "service_stopped"],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "hostname_unresolved": "UnknownHost",
+        "service_stopped": "postgres service is stopped"
+      }
+    },
+    {
+      "id": "v2_pg_vague",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v2_k8s_imagepull",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v2_mysql_access_denied",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v2_redis_stopped",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v2_git_push_rejected",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v2_tls_handshake",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    }
+  ],
+  "totals": {
+    "all": {
+      "case_count": 18,
+      "tp": 12,
+      "fp": 0,
+      "fn": 3,
+      "precision": 1.0,
+      "recall": 0.8
+    },
+    "postgresql": {
+      "case_count": 13,
+      "tp": 12,
+      "fp": 0,
+      "fn": 3,
+      "precision": 1.0,
+      "recall": 0.8
+    },
+    "non_database": {
+      "case_count": 5,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    }
+  }
+}

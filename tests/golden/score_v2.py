@@ -91,6 +91,7 @@ def collect_results() -> dict:
         row for row in rows if not row["id"].startswith("v2_pg_")
     ]
     return {
+        "status": "retrained: v2 used for rule fixes; not a held-out score",
         "cases": rows,
         "totals": {
             "all": _score(rows),
