@@ -151,6 +151,7 @@ def test_domain_blueprints_interpret_matching_reports(blueprint, report, observa
     assert [observation.id for observation in result.observations] == [observation_id]
     assert result.clarification_questions == []
     assert result.matched_rule_ids == [observation_id]
+    assert result.clarification_rule_ids == []
 
 
 def test_absent_polarity_is_carried_without_changing_rule_match_semantics():
@@ -245,7 +246,8 @@ def test_empty_when_missing_never_fires_and_duplicate_questions_are_removed():
     result = RuleInterpreter().interpret("No signal here.", blueprint)
 
     assert result.clarification_questions == ["Same question?"]
-    assert result.matched_rule_ids == ["ask_two"]
+    assert result.matched_rule_ids == []
+    assert result.clarification_rule_ids == ["ask_two"]
 
 
 def test_interpretation_is_deterministic():

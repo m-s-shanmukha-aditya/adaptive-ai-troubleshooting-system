@@ -34,6 +34,7 @@ class RuleInterpretation(BaseModel):
     observations: list[InterpretedObservation] = Field(default_factory=list)
     clarification_questions: list[str] = Field(default_factory=list)
     matched_rule_ids: list[str] = Field(default_factory=list)
+    clarification_rule_ids: list[str] = Field(default_factory=list)
     truncated: bool = False
     skipped_patterns: list[SkippedPattern] = Field(default_factory=list)
 
@@ -45,12 +46,14 @@ class RuleInterpreter:
         """Return matched evidence and questions in blueprint order.
 
         Polarity labels the emitted observation; it does not change when a rule
-        fires.
+        fires. ``matched_rule_ids`` contains only fired observation rules;
+        fired clarification rules are listed separately.
         """
         truncated = len(report_text) > MAX_REPORT_CHARS
         bounded_text = report_text[:MAX_REPORT_CHARS]
         observations = []
         matched_rule_ids = []
+        clarification_rule_ids = []
         fired_observation_ids = set()
         skipped_patterns = []
 
@@ -89,7 +92,7 @@ class RuleInterpreter:
                 for observation_id in rule.when_missing
             ):
                 continue
-            matched_rule_ids.append(rule.id)
+            clarification_rule_ids.append(rule.id)
             if rule.question not in clarification_questions:
                 clarification_questions.append(rule.question)
 
@@ -97,6 +100,7 @@ class RuleInterpreter:
             observations=observations,
             clarification_questions=clarification_questions,
             matched_rule_ids=matched_rule_ids,
+            clarification_rule_ids=clarification_rule_ids,
             truncated=truncated,
             skipped_patterns=skipped_patterns,
         )
