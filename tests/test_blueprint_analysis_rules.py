@@ -13,9 +13,9 @@ from app.services.blueprint_loader import load_blueprints
 EXISTING_BLUEPRINT_HASHES = {
     "HTTP Gateway 502 and Unhealthy Upstream":
         "300a18e62d37f73fe76f34d3d252369011951b43b4c980d3308c6184e5edc1bf",
-    # Intentional: the PostgreSQL blueprint now includes serialized analysis rules.
+    # Intentional: the PostgreSQL rule patterns were deliberately re-frozen after v3 training.
     "Spring Boot PostgreSQL Connection Failure":
-        "0fbec19002a217aaae7c08673a50a4732a56a0b3b5e4bb1fd92e3a39db8d90c0",
+        "15ebc13a3eee5189ac6c4177408c38d7fd229b14efbb966ccfae969f4bf10f47",
 }
 
 

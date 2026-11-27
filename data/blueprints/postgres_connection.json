@@ -1,4 +1,3 @@
-
 {
   "blueprint_id": "afd7f1ad-9936-56fe-be55-58fbd41ec5f1",
   "version": "1.0.0",
@@ -81,9 +80,12 @@
       "id": "credentials_state",
       "description": "The report states that database credentials are invalid.",
       "patterns": [
-        "\\b(?:database\\s+)?(?:username|user\\s+name)\\s+or\\s+password\\s+(?:is|are)\\s+(?:incorrect|invalid|wrong)\\b",
-        "\\b(?:incorrect|invalid|wrong)\\s+(?:database\\s+)?(?:username|user\\s+name|password|credentials)\\b",
-        "\\bcredentials?\\s+(?:is|are)\\s+(?:incorrect|invalid|wrong)\\b"
+        "\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b[\\s\\S]{0,100}\\b(?:username|user\\s+name)\\s+or\\s+password\\s+(?:is|are)\\s+(?:incorrect|invalid|wrong)\\b",
+        "\\b(?:username|user\\s+name)\\s+or\\s+password\\s+(?:is|are)\\s+(?:incorrect|invalid|wrong)\\b[\\s\\S]{0,100}\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b",
+        "\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b[\\s\\S]{0,100}\\b(?:incorrect|invalid|wrong)\\s+(?:database\\s+)?(?:username|user\\s+name|password|credentials)\\b",
+        "\\b(?:incorrect|invalid|wrong)\\s+(?:database\\s+)?(?:username|user\\s+name|password|credentials)\\b[\\s\\S]{0,100}\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b",
+        "\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b[\\s\\S]{0,100}\\bcredentials?\\b[^!?\\n]{0,80}\\b(?:is|are)\\s+(?:incorrect|invalid|wrong)\\b",
+        "\\bcredentials?\\b[^!?\\n]{0,80}\\b(?:is|are)\\s+(?:incorrect|invalid|wrong)\\b[\\s\\S]{0,100}\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b"
       ],
       "polarity": "present",
       "supports_diagnoses": [],
@@ -105,11 +107,11 @@
       "id": "datasource_port",
       "description": "The report states a configured port.",
       "patterns": [
-        "\\A(?=[\\s\\S]*\\b(?:postgres(?:ql)?|pgadmin)\\b.{0,120}\\bserver\\b.{0,30}\\b(?:on|listening)\\b)[\\s\\S]*?\\bjdbc:postgresql://[^/\\s:]+:(?P<port>\\d{1,5})(?=/|\\b)",
-        "\\bconfigured\\s+to\\s+use\\s+port\\s+(?P<port>\\d{1,5})\\b",
-        "\\bdatasource(?:\\s+URL)?\\s+uses?\\s+port\\s+(?P<port>\\d{1,5})\\b",
-        "\\bdatasource\\s+(?:is\\s+)?on\\s+(?P<port>\\d{1,5})\\b",
-        "\\A(?=[\\s\\S]*\\bpostgres(?:ql)?\\b)[\\s\\S]*?\\b(?:datasource|db|app)\\s+port\\s+(?:is|=)\\s*(?P<port>\\d{1,5})\\b"
+        "(?=\\A[\\s\\S]{0,1000}\\b(?:postgres(?:ql)?|pg)[\\s\\S]{0,20}\\b(?:server[\\s\\S]{0,8}\\b(?:running|listening|on|bound)\\b|listen(?:ing|s?))\\b)[\\s\\S]{0,1000}\\bjdbc:postgresql://[^/\\s:]+:(?P<port>\\d{1,5})(?=/|\\b)",
+        "\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b[\\s\\S]{0,100}\\bconfigured\\s+to\\s+use\\s+port\\s+(?P<port>\\d{1,5})\\b",
+        "\\bconfigured\\s+to\\s+use\\s+port\\s+(?P<port>\\d{1,5})\\b[\\s\\S]{0,100}\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b",
+        "\\bdatasource(?:\\s+URL)?\\s+(?:(?:uses?\\s+port|(?:is\\s+)?on(?:\\s+port)?)\\s*|port\\b[^.!?\\n]{0,40}\\b(?:is|=)\\s*)(?P<port>\\d{1,5})\\b",
+        "\\A(?=[\\s\\S]{0,99}\\b(?:postgres|pg))[\\s\\S]{0,999}\\b(?:db|app(?:lication)?)\\b[^.!?\\n]{0,20}\\b(?:port\\b[^.!?\\n]{0,30}\\b(?:is|=)\\s*|(?:is\\s+)?point(?:ed|s)\\s+(?:at|to)\\s+port\\s+)(?P<port>\\d{1,5})\\b"
       ],
       "polarity": "present",
       "supports_diagnoses": [],
@@ -122,7 +124,7 @@
         "\\bpostgres(?:ql)?\\s+(?:server\\s+)?(?:is\\s+)?(?:listening|listens?)\\s+(?:on|at)\\s+(?:port\\s+)?(?P<port>\\d{1,5})\\b",
         "\\bpostgres(?:ql)?\\s+listening\\s+on\\s+port\\s+(?P<port>\\d{1,5})\\b",
         "\\bpostgres(?:ql)?\\s+server\\s+is\\s+listening\\s+on\\s+port\\s+(?P<port>\\d{1,5})\\b",
-        "\\b(?:postgres(?:ql)?|pgadmin)\\b[^.;\\n]{0,80}\\bserver\\s+(?:(?:is\\s+)?(?:running\\s+on|listening\\s+on|on)|listens?\\s+(?:on|at))\\s+(?:port\\s+)?(?P<port>\\d{1,5})\\b",
+        "\\b(?:postgres(?:ql)?|pgadmin|pg)\\b[^.;\\n]{0,80}\\bserver\\s+(?:(?:is\\s+)?(?:running\\s+on|listening\\s+on|bound\\s+to|on)|listens?\\s+(?:on|at))\\s+(?:port\\s+)?(?P<port>\\d{1,5})\\b",
         "\\bpg\\s+(?:is\\s+)?on\\s+(?:port\\s+)?(?P<port>\\d{1,5})\\b"
       ],
       "polarity": "present",
@@ -133,8 +135,13 @@
       "id": "service_stopped",
       "description": "The report asserts that the PostgreSQL service or process is stopped, down, or not started.",
       "patterns": [
+        "\\bpostgres(?:ql)?\\b[\\s\\S]{0,80}\\bactive:\\s*inactive\\s*\\(dead\\)",
+        "\\bactive:\\s*inactive\\s*\\(dead\\)[\\s\\S]{0,80}\\bpostgres(?:ql)?\\b",
         "\\bpostgres(?:ql)?\\s+(?:(?:database|db)\\s+)?(?:service|process|server)\\s+(?:is\\s+|was\\s+)?(?:stopped|down|crashed|not\\s+running|not\\s+up|not\\s+started|never\\s+started)\\b",
         "\\bpostgres(?:ql)?\\b[^.!?\\n]{0,80}\\b(?:stopped|down|crashed|not\\s+running|not\\s+up|not\\s+started|never\\s+started|forgot\\s+to\\s+start|shut\\s+down)\\b",
+        "\\bpostgres(?:ql)?\\b[^.!?\\n]{0,80}\\bnever\\s+came\\s+back\\s+up\\b",
+        "\\bnobody\\s+(?:started|restarted)\\b[^.!?\\n]{0,80}\\bpostgres(?:ql)?\\b",
+        "\\bpostgres(?:ql)?\\b[^.!?\\n]{0,80}\\b(?:didn't|did\\s+not|never)\\s+(?:return|restart|start)\\b[^.!?\\n]{0,40}\\bafter\\b[^.!?\\n]{0,20}\\breboot\\b",
         "\\b(?:forgot|forgotten)\\s+to\\s+start\\s+(?:the\\s+)?postgres(?:ql)?\\b",
         "\\bshut\\s+(?:the\\s+)?postgres(?:ql)?(?:\\s+(?:database|db|service|process|server))?\\s+down\\b",
         "\\bpostgres(?:ql)?\\s+(?:isn't|isnt)\\s+(?:up|running)\\b"
@@ -143,6 +150,9 @@
       "supports_diagnoses": [],
       "suppressed_by": [
         "\\bnot\\s+stopped\\b",
+        "\\bisn't\\s+stopped\\b",
+        "\\bisnt\\s+stopped\\b",
+        "\\bnot\\s+(?:currently\\s+)?stopped\\b",
         "\\bnot\\s+down\\b",
         "\\bisn't\\s+down\\b",
         "\\bisnt\\s+down\\b",
@@ -154,10 +164,13 @@
       "description": "The report asserts that the PostgreSQL service or process is available.",
       "patterns": [
         "\\bpostgres(?:ql)?\\s+(?:(?:database|db)\\s+)?(?:service|process|server)\\s+(?:(?:seems?|appears?)\\s+to\\s+be\\s+|is\\s+(?:definitely\\s+)?|has\\s+)?(?:up|running|started)\\b",
+        "\\bpostgresql[-_]x64[-_]?\\d{1,3}\\s+service\\b[^.!?\\n]{0,40}\\brunning\\b",
         "\\bpostgres(?:ql)?\\s+is\\s+(?:definitely\\s+)?(?:up|running|started)\\b",
         "\\b(?:pg_isready|postgres(?:ql)?)\\b[^.!?\\n]{0,80}\\baccepting\\s+connections\\b",
         "\\bpostgres(?:ql)?\\b[^.!?\\n]{0,60}\\b(?:not\\s+stopped|isn't\\s+down|isnt\\s+down|not\\s+down)\\b",
-        "\\b(?:not\\s+stopped|isn't\\s+down|isnt\\s+down|not\\s+down)\\b[^.!?\\n]{0,60}\\bpostgres(?:ql)?\\b"
+        "\\b(?:not\\s+stopped|isn't\\s+down|isnt\\s+down|not\\s+down)\\b[^.!?\\n]{0,60}\\bpostgres(?:ql)?\\b",
+        "\\bpostgres(?:ql)?\\s+(?:isn't|isnt)\\s+stopped\\b",
+        "\\bpostgres(?:ql)?\\s+is\\s+not\\s+(?:currently\\s+)?stopped\\b"
       ],
       "polarity": "present",
       "supports_diagnoses": [],
@@ -177,7 +190,8 @@
       "id": "database_not_found",
       "description": "The report says that the database does not exist.",
       "patterns": [
-        "does not exist"
+        "\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b[\\s\\S]{0,100}\\bdoes\\s+not\\s+exist\\b",
+        "\\bdoes\\s+not\\s+exist\\b[\\s\\S]{0,100}\\b(?:postgres(?:ql)?|psql|pg_[a-z0-9_]{1,24}|jdbc:postgresql|database)\\b"
       ],
       "polarity": "present",
       "supports_diagnoses": [],
@@ -187,7 +201,8 @@
       "id": "hostname_unresolved",
       "description": "The report contains the unknown-host indicator.",
       "patterns": [
-        "unknownhost"
+        "unknownhost",
+        "\\bpsql\\b[^.!?\\n]{0,80}\\b(?:could\\s+not|cannot|unable\\s+to)\\s+translate\\s+host\\s+name\\b"
       ],
       "polarity": "present",
       "supports_diagnoses": [],
@@ -203,7 +218,8 @@
         "\\b(?:postgres(?:ql)?|database|db)\\b[^.!?\\n]{0,60}\\b(?:works?|working)\\s+now\\b",
         "\\b(?:spring(?:\\s+boot)?|application|app|postgres(?:ql)?)\\b[^.!?\\n]{0,80}\\bconnects?\\s+(?:to\\s+(?:postgres(?:ql)?|the\\s+database)\\s+)?fine\\b",
         "\\A(?=[\\s\\S]*\\bpostgres(?:ql)?\\b)[\\s\\S]*?\\b(?:spring\\s+boot\\s+)?app\\s+now\\s+connect(?:s|ed)\\s+to\\s+postgres(?:ql)?\\b",
-        "\\A(?=[\\s\\S]*\\bpostgres(?:ql)?\\b)[\\s\\S]*?\\b(?:spring\\s+boot\\s+)?app\\s+connects?\\s+fine\\s+now\\b"
+        "\\A(?=[\\s\\S]*\\bpostgres(?:ql)?\\b)[\\s\\S]*?\\b(?:spring\\s+boot\\s+)?app\\s+connects?\\s+fine\\s+now\\b",
+        "\\b(?:app|application)\\b(?![^\\n.!?]{0,24}\\bnot\\b)[^\\n.!?]{0,60}\\b(?:re)?connect(?:s|ed|ing)?\\s+to\\s+(?:the\\s+)?postgres(?:ql)?(?:\\s+(?:db|database))?\\b[^\\n.!?]{0,24}\\bagain\\b"
       ],
       "polarity": "present",
       "supports_diagnoses": [],
@@ -214,6 +230,8 @@
       "description": "The report contains a connection timeout.",
       "patterns": [
         "\\btimeout\\b",
+        "\\b(?:postgres(?:ql)?|database|db)\\b[\\s\\S]{0,120}\\btimes\\s+out\\b",
+        "\\btimes\\s+out\\b[\\s\\S]{0,120}\\b(?:postgres(?:ql)?|database|db)\\b",
         "\\b(?:postgres(?:ql)?|database|db)\\b.{0,100}\\b(?:timed|timing)\\s+out\\b",
         "\\b(?:timed|timing)\\s+out\\b.{0,100}\\b(?:postgres(?:ql)?|database|db)\\b"
       ],
@@ -241,28 +259,133 @@
     }
   ],
   "diagnoses": {
-    "postgres_service_stopped": {"meaning": "PostgreSQL service is reported stopped", "supporting_evidence": ["service_state"]},
-    "datasource_port_incorrect": {"meaning": "Configured datasource and listener ports differ", "supporting_evidence": ["port_mismatch"]},
-    "database_credentials_invalid": {"meaning": "Database authentication is reported rejected", "supporting_evidence": ["authentication_failure", "credentials_state"]},
-    "database_name_incorrect": {"meaning": "Requested database is reported missing", "supporting_evidence": ["database_not_found"]},
-    "connection_successful": {"meaning": "Connection is reported successful", "supporting_evidence": ["connection_success"]},
-    "postgres_connection_issue_uncertain": {"meaning": "Evidence does not yet isolate a cause", "supporting_evidence": []}
+    "postgres_service_stopped": {
+      "meaning": "PostgreSQL service is reported stopped",
+      "supporting_evidence": [
+        "service_state"
+      ]
+    },
+    "datasource_port_incorrect": {
+      "meaning": "Configured datasource and listener ports differ",
+      "supporting_evidence": [
+        "port_mismatch"
+      ]
+    },
+    "database_credentials_invalid": {
+      "meaning": "Database authentication is reported rejected",
+      "supporting_evidence": [
+        "authentication_failure",
+        "credentials_state"
+      ]
+    },
+    "database_name_incorrect": {
+      "meaning": "Requested database is reported missing",
+      "supporting_evidence": [
+        "database_not_found"
+      ]
+    },
+    "connection_successful": {
+      "meaning": "Connection is reported successful",
+      "supporting_evidence": [
+        "connection_success"
+      ]
+    },
+    "postgres_connection_issue_uncertain": {
+      "meaning": "Evidence does not yet isolate a cause",
+      "supporting_evidence": []
+    }
   },
   "actions": {
-    "start_postgres_service": {"meaning": "Start PostgreSQL only if confirmed stopped", "diagnosis_ids": ["postgres_service_stopped"]},
-    "verify_service_status": {"meaning": "Check whether the service is active", "diagnosis_ids": ["postgres_service_stopped", "postgres_connection_issue_uncertain"]},
-    "align_datasource_port": {"meaning": "Align datasource with confirmed listener port", "diagnosis_ids": ["datasource_port_incorrect"]},
-    "verify_listener_port": {"meaning": "Check the listening port", "diagnosis_ids": ["datasource_port_incorrect", "postgres_connection_issue_uncertain"]},
-    "verify_credentials_securely": {"meaning": "Check credentials without revealing them", "diagnosis_ids": ["database_credentials_invalid", "postgres_connection_issue_uncertain"]},
-    "rotate_credentials_if_needed": {"meaning": "Rotate credentials through approved secret management", "diagnosis_ids": ["database_credentials_invalid"]},
-    "align_database_name": {"meaning": "Correct a confirmed database-name mismatch", "diagnosis_ids": ["database_name_incorrect"]},
-    "verify_database_exists": {"meaning": "Check whether the intended database exists", "diagnosis_ids": ["database_name_incorrect", "postgres_connection_issue_uncertain"]},
-    "make_no_configuration_change": {"meaning": "Avoid changes when connection succeeds", "diagnosis_ids": ["connection_successful"]},
-    "confirm_application_health": {"meaning": "Check application health", "diagnosis_ids": ["connection_successful"]},
-    "check_host_reachability": {"meaning": "Check network reachability", "diagnosis_ids": ["postgres_connection_issue_uncertain"]},
-    "verify_datasource_url": {"meaning": "Inspect configured connection URL", "diagnosis_ids": ["postgres_connection_issue_uncertain", "datasource_port_incorrect", "database_name_incorrect"]},
-    "inspect_database_error": {"meaning": "Inspect the exact reported error", "diagnosis_ids": ["postgres_connection_issue_uncertain"]},
-    "request_connection_details": {"meaning": "Request relevant details with secrets redacted", "diagnosis_ids": ["postgres_connection_issue_uncertain"]}
+    "start_postgres_service": {
+      "meaning": "Start PostgreSQL only if confirmed stopped",
+      "diagnosis_ids": [
+        "postgres_service_stopped"
+      ]
+    },
+    "verify_service_status": {
+      "meaning": "Check whether the service is active",
+      "diagnosis_ids": [
+        "postgres_service_stopped",
+        "postgres_connection_issue_uncertain"
+      ]
+    },
+    "align_datasource_port": {
+      "meaning": "Align datasource with confirmed listener port",
+      "diagnosis_ids": [
+        "datasource_port_incorrect"
+      ]
+    },
+    "verify_listener_port": {
+      "meaning": "Check the listening port",
+      "diagnosis_ids": [
+        "datasource_port_incorrect",
+        "postgres_connection_issue_uncertain"
+      ]
+    },
+    "verify_credentials_securely": {
+      "meaning": "Check credentials without revealing them",
+      "diagnosis_ids": [
+        "database_credentials_invalid",
+        "postgres_connection_issue_uncertain"
+      ]
+    },
+    "rotate_credentials_if_needed": {
+      "meaning": "Rotate credentials through approved secret management",
+      "diagnosis_ids": [
+        "database_credentials_invalid"
+      ]
+    },
+    "align_database_name": {
+      "meaning": "Correct a confirmed database-name mismatch",
+      "diagnosis_ids": [
+        "database_name_incorrect"
+      ]
+    },
+    "verify_database_exists": {
+      "meaning": "Check whether the intended database exists",
+      "diagnosis_ids": [
+        "database_name_incorrect",
+        "postgres_connection_issue_uncertain"
+      ]
+    },
+    "make_no_configuration_change": {
+      "meaning": "Avoid changes when connection succeeds",
+      "diagnosis_ids": [
+        "connection_successful"
+      ]
+    },
+    "confirm_application_health": {
+      "meaning": "Check application health",
+      "diagnosis_ids": [
+        "connection_successful"
+      ]
+    },
+    "check_host_reachability": {
+      "meaning": "Check network reachability",
+      "diagnosis_ids": [
+        "postgres_connection_issue_uncertain"
+      ]
+    },
+    "verify_datasource_url": {
+      "meaning": "Inspect configured connection URL",
+      "diagnosis_ids": [
+        "postgres_connection_issue_uncertain",
+        "datasource_port_incorrect",
+        "database_name_incorrect"
+      ]
+    },
+    "inspect_database_error": {
+      "meaning": "Inspect the exact reported error",
+      "diagnosis_ids": [
+        "postgres_connection_issue_uncertain"
+      ]
+    },
+    "request_connection_details": {
+      "meaning": "Request relevant details with secrets redacted",
+      "diagnosis_ids": [
+        "postgres_connection_issue_uncertain"
+      ]
+    }
   },
   "status": "draft",
   "success_count": 0,

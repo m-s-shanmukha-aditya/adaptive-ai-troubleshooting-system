@@ -95,7 +95,7 @@ def collect_results() -> dict:
         row for row in rows if row["id"] != KNOWN_LIMITATION_ID
     ]
     return {
-        "status": "first score on frozen rules; held-out",
+        "status": "retrained: v3 used for rule fixes; not a held-out score",
         "cases": rows,
         "totals": {
             "all": _score(rows),

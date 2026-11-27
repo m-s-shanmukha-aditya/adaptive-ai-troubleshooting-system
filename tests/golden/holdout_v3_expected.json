@@ -1,0 +1,483 @@
+{
+  "cases": [
+    {
+      "id": "v3_pg_down_systemd",
+      "output": {
+        "issue": "systemctl status postgresql shows Active: inactive (dead) since this morning. Spring app fails on startup with Connection refused.",
+        "conditions": [
+          "connection refused"
+        ],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "Database service or configured port may be unavailable."
+        ],
+        "observations": {
+          "connection_refused": "connection refused"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_reboot_not_started",
+      "output": {
+        "issue": "after the server rebooted postgres never came back up, nobody started the postgresql service again and now the app cant connect",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_isready_timeout",
+      "output": {
+        "issue": "pg_isready says postgres is accepting connections but my java app still times out whenever it tries to connect",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_running_auth_log",
+      "output": {
+        "issue": "checked services.msc, the postgresql-x64-15 service is running fine. Login from the app still fails: FATAL: password authentication failed for user \"appuser\"",
+        "conditions": [
+          "password authentication"
+        ],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "Authentication failed; verify the configured credentials securely."
+        ],
+        "observations": {
+          "authentication_failed": "password authentication",
+          "service_state": "running",
+          "authentication_failure": "password_authentication_failed"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_port_mismatch_url",
+      "output": {
+        "issue": "my application.properties has spring.datasource.url=jdbc:postgresql://localhost:5433/orders but netstat shows postgres listening on 5432",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "reported_detail_1": "jdbc:postgresql://localhost:5433/orders",
+          "reported_detail_2": "localhost"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_port_equal_words",
+      "output": {
+        "issue": "the db port in my app config is 5432 and the postgres server listens at 5432 so the ports match, the problem must be somewhere else",
+        "conditions": [],
+        "constraints": [
+          "the db port in my app config is 5432 and the postgres server listens at 5432 so the ports match, the problem must be somewhere else"
+        ],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_port_mismatch_words",
+      "output": {
+        "issue": "App is pointed at port 5433. The PG server is bound to 5432. Connection fails.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_listener_only",
+      "output": {
+        "issue": "postgres listens on 5433 since I changed the config last week, not sure what else I touched",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_wrong_db_fatal",
+      "output": {
+        "issue": "Hibernate fails at startup: FATAL: database \"inventory_db\" does not exist (postgres 15)",
+        "conditions": [
+          "does not exist"
+        ],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "The configured database name may not exist."
+        ],
+        "observations": {
+          "database_not_found": "does not exist"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_wrong_db_hedged",
+      "output": {
+        "issue": "maybe the postgres database name is wrong?? not sure it even exists, the app just cant connect",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_unknown_host_k8s",
+      "output": {
+        "issue": "pod log: java.net.UnknownHostException: postgres-svc.default.svc.cluster.local while opening the postgres connection",
+        "conditions": [
+          "unknownhost"
+        ],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [
+          "The configured hostname did not resolve."
+        ],
+        "observations": {
+          "hostname_unresolved": "unknownhost",
+          "reported_detail_1": "java.net.UnknownHostException: postgres-svc.default.svc.cluster.local while opening the postgres connection"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_host_translate",
+      "output": {
+        "issue": "psql: error: could not translate host name \"db-prod\" to address: Name or service not known",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {
+          "reported_detail_1": "could not translate host name"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_timeout_hikari",
+      "output": {
+        "issue": "HikariPool-1 - Connection is not available, request timed out after 30000ms. This is the postgres datasource.",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_timeout_firewall",
+      "output": {
+        "issue": "connecting to the postgres box from the office network just hangs and then says Connection timed out, but it works from the same subnet",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_success_again",
+      "output": {
+        "issue": "ok fixed it, my spring app connects to the postgres db again and there are no more errors",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_success_near_miss",
+      "output": {
+        "issue": "my app does not connect to postgres yet, it is still failing after the config change",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_not_stopped_simple",
+      "output": {
+        "issue": "postgres isn't stopped, I checked, it is up. The app still cannot get in though.",
+        "conditions": [],
+        "constraints": [
+          "postgres isn't stopped, I checked, it is up. The app still cannot get in though."
+        ],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_not_currently_stopped",
+      "output": {
+        "issue": "postgres is not currently stopped, it came back after the restart but the app has not retried yet",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_two_errors_log",
+      "output": {
+        "issue": "two errors in the log: FATAL: password authentication failed for user \"svc_orders\" and later FATAL: database \"orders_v2\" does not exist",
+        "conditions": [
+          "password authentication",
+          "does not exist"
+        ],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [
+          "Authentication failed; verify the configured credentials securely.",
+          "The configured database name may not exist."
+        ],
+        "observations": {
+          "authentication_failed": "password authentication",
+          "database_not_found": "does not exist",
+          "reported_detail_1": "FATAL: password authentication failed for user",
+          "authentication_failure": "password_authentication_failed"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_creds_definite",
+      "output": {
+        "issue": "the postgres credentials in application.yml are incorrect, I tried the same ones in psql and they were rejected",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {
+          "reported_detail_1": "application.yml"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_creds_hedged",
+      "output": {
+        "issue": "could be a bad postgres password honestly, I am not sure",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_pg_vague",
+      "output": {
+        "issue": "something is wrong with the database connection, no idea what",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_mariadb_down",
+      "output": {
+        "issue": "MariaDB service is down on the staging box and the app gets Connection refused on 3306",
+        "conditions": [
+          "connection refused"
+        ],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [
+          "Database service or configured port may be unavailable."
+        ],
+        "observations": {
+          "connection_refused": "connection refused"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_mongo_auth",
+      "output": {
+        "issue": "MongoServerError: Authentication failed. the mongodb username or password is wrong",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {
+          "reported_detail_1": "Authentication failed. the mongodb username or password is wrong",
+          "credentials_state": "reported_invalid"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "supported"
+      }
+    },
+    {
+      "id": "v3_aws_creds",
+      "output": {
+        "issue": "aws s3 ls fails with The security token included in the request is invalid. my access key or secret is incorrect",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_ssh_timeout",
+      "output": {
+        "issue": "ssh to the build server hangs and then prints Connection timed out",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_elasticsearch_ports",
+      "output": {
+        "issue": "elasticsearch is listening on 9200 but the client is configured to use port 9201",
+        "conditions": [],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_redis_key_missing",
+      "output": {
+        "issue": "the Redis key session:abc does not exist so the cache lookup returns null",
+        "conditions": [
+          "does not exist"
+        ],
+        "constraints": [],
+        "environment": {},
+        "likely_causes": [
+          "The configured database name may not exist."
+        ],
+        "observations": {
+          "database_not_found": "does not exist"
+        },
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    },
+    {
+      "id": "v3_docker_pull_postgres_image",
+      "output": {
+        "issue": "docker pull postgres:15 fails with manifest unknown: tag not found",
+        "conditions": [],
+        "constraints": [],
+        "environment": {
+          "database": "PostgreSQL"
+        },
+        "likely_causes": [],
+        "observations": {},
+        "follow_up_questions": [],
+        "diagnostic_status": "uncertain"
+      }
+    }
+  ]
+}

@@ -1,29 +1,33 @@
 {
-  "status": "first score on frozen rules; held-out",
+  "status": "retrained: v3 used for rule fixes; not a held-out score",
   "cases": [
     {
       "id": "v3_pg_down_systemd",
       "truth": [
         "service_stopped"
       ],
-      "emitted": [],
-      "missing": [
+      "emitted": [
         "service_stopped"
       ],
+      "missing": [],
       "extra": [],
-      "matched_text": {}
+      "matched_text": {
+        "service_stopped": "postgresql shows Active: inactive (dead)"
+      }
     },
     {
       "id": "v3_pg_reboot_not_started",
       "truth": [
         "service_stopped"
       ],
-      "emitted": [],
-      "missing": [
+      "emitted": [
         "service_stopped"
       ],
+      "missing": [],
       "extra": [],
-      "matched_text": {}
+      "matched_text": {
+        "service_stopped": "postgres never came back up"
+      }
     },
     {
       "id": "v3_pg_isready_timeout",
@@ -32,13 +36,13 @@
         "service_running"
       ],
       "emitted": [
+        "connection_timeout",
         "service_running"
       ],
-      "missing": [
-        "connection_timeout"
-      ],
+      "missing": [],
       "extra": [],
       "matched_text": {
+        "connection_timeout": "postgres is accepting connections but my java app still times out",
         "service_running": "pg_isready says postgres is accepting connections"
       }
     },
@@ -51,15 +55,15 @@
       ],
       "emitted": [
         "authentication_failed",
-        "authentication_failure"
-      ],
-      "missing": [
+        "authentication_failure",
         "service_running"
       ],
+      "missing": [],
       "extra": [],
       "matched_text": {
         "authentication_failed": "password authentication",
-        "authentication_failure": "checked services.msc, the postgresql-x64-15 service is running fine. Login from the app still fails: FATAL: password aut"
+        "authentication_failure": "checked services.msc, the postgresql-x64-15 service is running fine. Login from the app still fails: FATAL: password aut",
+        "service_running": "postgresql-x64-15 service is running"
       }
     },
     {
@@ -70,15 +74,16 @@
         "port_mismatch"
       ],
       "emitted": [
-        "listener_port"
-      ],
-      "missing": [
         "datasource_port",
+        "listener_port",
         "port_mismatch"
       ],
+      "missing": [],
       "extra": [],
       "matched_text": {
-        "listener_port": "postgres listening on 5432"
+        "datasource_port": "my application.properties has spring.datasource.url=jdbc:postgresql://localhost:5433",
+        "listener_port": "postgres listening on 5432",
+        "port_mismatch": "5433 not_equal 5432"
       }
     },
     {
@@ -88,13 +93,13 @@
         "listener_port"
       ],
       "emitted": [
+        "datasource_port",
         "listener_port"
       ],
-      "missing": [
-        "datasource_port"
-      ],
+      "missing": [],
       "extra": [],
       "matched_text": {
+        "datasource_port": "the db port in my app config is 5432",
         "listener_port": "postgres server listens at 5432"
       }
     },
@@ -105,14 +110,18 @@
         "listener_port",
         "port_mismatch"
       ],
-      "emitted": [],
-      "missing": [
+      "emitted": [
         "datasource_port",
         "listener_port",
         "port_mismatch"
       ],
+      "missing": [],
       "extra": [],
-      "matched_text": {}
+      "matched_text": {
+        "datasource_port": "App is pointed at port 5433",
+        "listener_port": "PG server is bound to 5432",
+        "port_mismatch": "5433 not_equal 5432"
+      }
     },
     {
       "id": "v3_pg_listener_only",
@@ -139,7 +148,7 @@
       "missing": [],
       "extra": [],
       "matched_text": {
-        "database_not_found": "does not exist"
+        "database_not_found": "database \"inventory_db\" does not exist"
       }
     },
     {
@@ -169,12 +178,14 @@
       "truth": [
         "hostname_unresolved"
       ],
-      "emitted": [],
-      "missing": [
+      "emitted": [
         "hostname_unresolved"
       ],
+      "missing": [],
       "extra": [],
-      "matched_text": {}
+      "matched_text": {
+        "hostname_unresolved": "psql: error: could not translate host name"
+      }
     },
     {
       "id": "v3_pg_timeout_hikari",
@@ -209,12 +220,14 @@
       "truth": [
         "connection_success"
       ],
-      "emitted": [],
-      "missing": [
+      "emitted": [
         "connection_success"
       ],
+      "missing": [],
       "extra": [],
-      "matched_text": {}
+      "matched_text": {
+        "connection_success": "app connects to the postgres db again"
+      }
     },
     {
       "id": "v3_pg_success_near_miss",
@@ -230,16 +243,12 @@
         "service_running"
       ],
       "emitted": [
-        "service_stopped"
-      ],
-      "missing": [
         "service_running"
       ],
-      "extra": [
-        "service_stopped"
-      ],
+      "missing": [],
+      "extra": [],
       "matched_text": {
-        "service_stopped": "postgres isn't stopped"
+        "service_running": "postgres isn't stopped"
       }
     },
     {
@@ -248,16 +257,12 @@
         "service_running"
       ],
       "emitted": [
-        "service_stopped"
-      ],
-      "missing": [
         "service_running"
       ],
-      "extra": [
-        "service_stopped"
-      ],
+      "missing": [],
+      "extra": [],
       "matched_text": {
-        "service_stopped": "postgres is not currently stopped"
+        "service_running": "postgres is not currently stopped"
       }
     },
     {
@@ -277,7 +282,7 @@
       "matched_text": {
         "authentication_failed": "password authentication",
         "authentication_failure": "two errors in the log: FATAL: password authentication",
-        "database_not_found": "does not exist"
+        "database_not_found": "database \"orders_v2\" does not exist"
       }
     },
     {
@@ -285,12 +290,14 @@
       "truth": [
         "credentials_state"
       ],
-      "emitted": [],
-      "missing": [
+      "emitted": [
         "credentials_state"
       ],
+      "missing": [],
       "extra": [],
-      "matched_text": {}
+      "matched_text": {
+        "credentials_state": "postgres credentials in application.yml are incorrect"
+      }
     },
     {
       "id": "v3_pg_creds_hedged",
@@ -319,16 +326,10 @@
     {
       "id": "v3_mongo_auth",
       "truth": [],
-      "emitted": [
-        "credentials_state"
-      ],
+      "emitted": [],
       "missing": [],
-      "extra": [
-        "credentials_state"
-      ],
-      "matched_text": {
-        "credentials_state": "username or password is wrong"
-      }
+      "extra": [],
+      "matched_text": {}
     },
     {
       "id": "v3_aws_creds",
@@ -349,30 +350,18 @@
     {
       "id": "v3_elasticsearch_ports",
       "truth": [],
-      "emitted": [
-        "datasource_port"
-      ],
+      "emitted": [],
       "missing": [],
-      "extra": [
-        "datasource_port"
-      ],
-      "matched_text": {
-        "datasource_port": "configured to use port 9201"
-      }
+      "extra": [],
+      "matched_text": {}
     },
     {
       "id": "v3_redis_key_missing",
       "truth": [],
-      "emitted": [
-        "database_not_found"
-      ],
+      "emitted": [],
       "missing": [],
-      "extra": [
-        "database_not_found"
-      ],
-      "matched_text": {
-        "database_not_found": "does not exist"
-      }
+      "extra": [],
+      "matched_text": {}
     },
     {
       "id": "v3_docker_pull_postgres_image",
@@ -386,35 +375,35 @@
   "totals": {
     "all": {
       "case_count": 29,
-      "tp": 13,
-      "fp": 5,
-      "fn": 15,
-      "precision": 0.722222,
-      "recall": 0.464286
+      "tp": 28,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
     },
     "postgresql": {
       "case_count": 22,
-      "tp": 13,
-      "fp": 2,
-      "fn": 15,
-      "precision": 0.866667,
-      "recall": 0.464286
+      "tp": 28,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
     },
     "non_database": {
       "case_count": 7,
       "tp": 0,
-      "fp": 3,
+      "fp": 0,
       "fn": 0,
       "precision": 0.0,
       "recall": 0.0
     },
     "all_excluding_known_limitation": {
       "case_count": 28,
-      "tp": 13,
-      "fp": 4,
-      "fn": 14,
-      "precision": 0.764706,
-      "recall": 0.481481
+      "tp": 27,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
     }
   }
 }

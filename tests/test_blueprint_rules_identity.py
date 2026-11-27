@@ -19,6 +19,7 @@ RECORDED_INPUTS = (
     ("analyzer_cases.json", 32),
     ("holdout_cases.json", 14),
     ("holdout_v2.json", 18),
+    ("holdout_v3.json", 29),
 )
 
 
@@ -46,7 +47,7 @@ def test_json_blueprint_rules_match_fixture_for_every_recorded_input():
     interpreter = RuleInterpreter()
     issues = _recorded_issues()
 
-    assert len(issues) == 64
+    assert len(issues) == 93
     assert json_blueprint.status.value == "draft"
     assert json_blueprint.active is False
 

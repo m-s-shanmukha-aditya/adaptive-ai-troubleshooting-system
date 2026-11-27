@@ -64,6 +64,24 @@ def test_rule_fixture_matches_hand_labeled_truth():
     assert seen_known_misses == set(TRUTH_KNOWN_MISSES)
 
 
+def test_v1_holdout_truth_totals_remain_17_0_0():
+    interpreter = RuleInterpreter()
+    blueprint = build_postgres_rules_blueprint()
+    true_positives = false_positives = false_negatives = 0
+
+    for case in CASES:
+        emitted = {
+            observation.id
+            for observation in interpreter.interpret(case["issue"], blueprint).observations
+        }
+        truth = TRUTH[case["id"]]
+        true_positives += len(truth & emitted)
+        false_positives += len(emitted - truth)
+        false_negatives += len(truth - emitted)
+
+    assert (true_positives, false_positives, false_negatives) == (17, 0, 0)
+
+
 def test_service_state_ids_distinguish_stopped_and_running():
     interpreter = RuleInterpreter()
     blueprint = build_postgres_rules_blueprint()
@@ -99,6 +117,10 @@ def test_no_postgres_rules_fire_for_heldout_non_database_cases():
     ]
 
     assert len(non_database_cases) == 4
+    for case in non_database_cases:
+        result = interpreter.interpret(case["issue"], blueprint)
+        assert result.observations == [], case["id"]
+
     for case in empty_truth_cases:
         result = interpreter.interpret(case["issue"], blueprint)
         assert result.observations == [], case["id"]

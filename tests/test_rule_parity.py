@@ -68,6 +68,8 @@ def test_all_case_observation_parity_and_recorded_differences():
     expected_differences = {**KNOWN_GAPS, **INTENTIONAL_DIVERGENCES}
     seen_differences = set()
 
+    assert len(CASES) == 32
+    assert len(expected_differences) == 3
     for case in CASES:
         case_id = case["id"]
         old_ids = _mapped_old_observation_ids(case_id)
@@ -85,6 +87,7 @@ def test_all_case_observation_parity_and_recorded_differences():
             assert new_ids == old_ids, case_id
 
     assert seen_differences == set(expected_differences)
+    assert len(CASES) - len(seen_differences) == 29
 
 
 def test_no_postgres_observation_or_clarification_rule_fires_for_non_database_cases():

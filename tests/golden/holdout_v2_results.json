@@ -91,7 +91,7 @@
       "missing": [],
       "extra": [],
       "matched_text": {
-        "database_not_found": "does not exist"
+        "database_not_found": "database \"orders_prod\" does not exist"
       }
     },
     {
@@ -147,7 +147,7 @@
       "missing": [],
       "extra": [],
       "matched_text": {
-        "credentials_state": "Wrong password"
+        "credentials_state": "Wrong password for the postgres"
       }
     },
     {
