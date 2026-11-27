@@ -1,0 +1,420 @@
+{
+  "status": "first score on frozen rules; held-out",
+  "cases": [
+    {
+      "id": "v3_pg_down_systemd",
+      "truth": [
+        "service_stopped"
+      ],
+      "emitted": [],
+      "missing": [
+        "service_stopped"
+      ],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_reboot_not_started",
+      "truth": [
+        "service_stopped"
+      ],
+      "emitted": [],
+      "missing": [
+        "service_stopped"
+      ],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_isready_timeout",
+      "truth": [
+        "connection_timeout",
+        "service_running"
+      ],
+      "emitted": [
+        "service_running"
+      ],
+      "missing": [
+        "connection_timeout"
+      ],
+      "extra": [],
+      "matched_text": {
+        "service_running": "pg_isready says postgres is accepting connections"
+      }
+    },
+    {
+      "id": "v3_pg_running_auth_log",
+      "truth": [
+        "authentication_failed",
+        "authentication_failure",
+        "service_running"
+      ],
+      "emitted": [
+        "authentication_failed",
+        "authentication_failure"
+      ],
+      "missing": [
+        "service_running"
+      ],
+      "extra": [],
+      "matched_text": {
+        "authentication_failed": "password authentication",
+        "authentication_failure": "checked services.msc, the postgresql-x64-15 service is running fine. Login from the app still fails: FATAL: password aut"
+      }
+    },
+    {
+      "id": "v3_pg_port_mismatch_url",
+      "truth": [
+        "datasource_port",
+        "listener_port",
+        "port_mismatch"
+      ],
+      "emitted": [
+        "listener_port"
+      ],
+      "missing": [
+        "datasource_port",
+        "port_mismatch"
+      ],
+      "extra": [],
+      "matched_text": {
+        "listener_port": "postgres listening on 5432"
+      }
+    },
+    {
+      "id": "v3_pg_port_equal_words",
+      "truth": [
+        "datasource_port",
+        "listener_port"
+      ],
+      "emitted": [
+        "listener_port"
+      ],
+      "missing": [
+        "datasource_port"
+      ],
+      "extra": [],
+      "matched_text": {
+        "listener_port": "postgres server listens at 5432"
+      }
+    },
+    {
+      "id": "v3_pg_port_mismatch_words",
+      "truth": [
+        "datasource_port",
+        "listener_port",
+        "port_mismatch"
+      ],
+      "emitted": [],
+      "missing": [
+        "datasource_port",
+        "listener_port",
+        "port_mismatch"
+      ],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_listener_only",
+      "truth": [
+        "listener_port"
+      ],
+      "emitted": [
+        "listener_port"
+      ],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "listener_port": "postgres listens on 5433"
+      }
+    },
+    {
+      "id": "v3_pg_wrong_db_fatal",
+      "truth": [
+        "database_not_found"
+      ],
+      "emitted": [
+        "database_not_found"
+      ],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "database_not_found": "does not exist"
+      }
+    },
+    {
+      "id": "v3_pg_wrong_db_hedged",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_unknown_host_k8s",
+      "truth": [
+        "hostname_unresolved"
+      ],
+      "emitted": [
+        "hostname_unresolved"
+      ],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "hostname_unresolved": "UnknownHost"
+      }
+    },
+    {
+      "id": "v3_pg_host_translate",
+      "truth": [
+        "hostname_unresolved"
+      ],
+      "emitted": [],
+      "missing": [
+        "hostname_unresolved"
+      ],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_timeout_hikari",
+      "truth": [
+        "connection_timeout"
+      ],
+      "emitted": [
+        "connection_timeout"
+      ],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "connection_timeout": "timed out after 30000ms. This is the postgres"
+      }
+    },
+    {
+      "id": "v3_pg_timeout_firewall",
+      "truth": [
+        "connection_timeout"
+      ],
+      "emitted": [
+        "connection_timeout"
+      ],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "connection_timeout": "postgres box from the office network just hangs and then says Connection timed out"
+      }
+    },
+    {
+      "id": "v3_pg_success_again",
+      "truth": [
+        "connection_success"
+      ],
+      "emitted": [],
+      "missing": [
+        "connection_success"
+      ],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_success_near_miss",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_not_stopped_simple",
+      "truth": [
+        "service_running"
+      ],
+      "emitted": [
+        "service_stopped"
+      ],
+      "missing": [
+        "service_running"
+      ],
+      "extra": [
+        "service_stopped"
+      ],
+      "matched_text": {
+        "service_stopped": "postgres isn't stopped"
+      }
+    },
+    {
+      "id": "v3_pg_not_currently_stopped",
+      "truth": [
+        "service_running"
+      ],
+      "emitted": [
+        "service_stopped"
+      ],
+      "missing": [
+        "service_running"
+      ],
+      "extra": [
+        "service_stopped"
+      ],
+      "matched_text": {
+        "service_stopped": "postgres is not currently stopped"
+      }
+    },
+    {
+      "id": "v3_pg_two_errors_log",
+      "truth": [
+        "authentication_failed",
+        "authentication_failure",
+        "database_not_found"
+      ],
+      "emitted": [
+        "authentication_failed",
+        "authentication_failure",
+        "database_not_found"
+      ],
+      "missing": [],
+      "extra": [],
+      "matched_text": {
+        "authentication_failed": "password authentication",
+        "authentication_failure": "two errors in the log: FATAL: password authentication",
+        "database_not_found": "does not exist"
+      }
+    },
+    {
+      "id": "v3_pg_creds_definite",
+      "truth": [
+        "credentials_state"
+      ],
+      "emitted": [],
+      "missing": [
+        "credentials_state"
+      ],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_creds_hedged",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_pg_vague",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_mariadb_down",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_mongo_auth",
+      "truth": [],
+      "emitted": [
+        "credentials_state"
+      ],
+      "missing": [],
+      "extra": [
+        "credentials_state"
+      ],
+      "matched_text": {
+        "credentials_state": "username or password is wrong"
+      }
+    },
+    {
+      "id": "v3_aws_creds",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_ssh_timeout",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    },
+    {
+      "id": "v3_elasticsearch_ports",
+      "truth": [],
+      "emitted": [
+        "datasource_port"
+      ],
+      "missing": [],
+      "extra": [
+        "datasource_port"
+      ],
+      "matched_text": {
+        "datasource_port": "configured to use port 9201"
+      }
+    },
+    {
+      "id": "v3_redis_key_missing",
+      "truth": [],
+      "emitted": [
+        "database_not_found"
+      ],
+      "missing": [],
+      "extra": [
+        "database_not_found"
+      ],
+      "matched_text": {
+        "database_not_found": "does not exist"
+      }
+    },
+    {
+      "id": "v3_docker_pull_postgres_image",
+      "truth": [],
+      "emitted": [],
+      "missing": [],
+      "extra": [],
+      "matched_text": {}
+    }
+  ],
+  "totals": {
+    "all": {
+      "case_count": 29,
+      "tp": 13,
+      "fp": 5,
+      "fn": 15,
+      "precision": 0.722222,
+      "recall": 0.464286
+    },
+    "postgresql": {
+      "case_count": 22,
+      "tp": 13,
+      "fp": 2,
+      "fn": 15,
+      "precision": 0.866667,
+      "recall": 0.464286
+    },
+    "non_database": {
+      "case_count": 7,
+      "tp": 0,
+      "fp": 3,
+      "fn": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    "all_excluding_known_limitation": {
+      "case_count": 28,
+      "tp": 13,
+      "fp": 4,
+      "fn": 14,
+      "precision": 0.764706,
+      "recall": 0.481481
+    }
+  }
+}

@@ -1,0 +1,224 @@
+{
+  "cases": [
+    {
+      "id": "v3_pg_down_systemd",
+      "issue": "systemctl status postgresql shows Active: inactive (dead) since this morning. Spring app fails on startup with Connection refused.",
+      "truth": [
+        "service_stopped"
+      ],
+      "note": "Systemd 'inactive (dead)' for postgresql is a stopped service."
+    },
+    {
+      "id": "v3_pg_reboot_not_started",
+      "issue": "after the server rebooted postgres never came back up, nobody started the postgresql service again and now the app cant connect",
+      "truth": [
+        "service_stopped"
+      ],
+      "note": "Service did not come back after reboot; stopped state, casual wording."
+    },
+    {
+      "id": "v3_pg_isready_timeout",
+      "issue": "pg_isready says postgres is accepting connections but my java app still times out whenever it tries to connect",
+      "truth": [
+        "service_running",
+        "connection_timeout"
+      ],
+      "note": "Health probe shows running; app side timeout."
+    },
+    {
+      "id": "v3_pg_running_auth_log",
+      "issue": "checked services.msc, the postgresql-x64-15 service is running fine. Login from the app still fails: FATAL: password authentication failed for user \"appuser\"",
+      "truth": [
+        "service_running",
+        "authentication_failed",
+        "authentication_failure"
+      ],
+      "note": "Running state plus a literal authentication log line."
+    },
+    {
+      "id": "v3_pg_port_mismatch_url",
+      "issue": "my application.properties has spring.datasource.url=jdbc:postgresql://localhost:5433/orders but netstat shows postgres listening on 5432",
+      "truth": [
+        "datasource_port",
+        "listener_port",
+        "port_mismatch"
+      ],
+      "note": "Both ports stated, values differ."
+    },
+    {
+      "id": "v3_pg_port_equal_words",
+      "issue": "the db port in my app config is 5432 and the postgres server listens at 5432 so the ports match, the problem must be somewhere else",
+      "truth": [
+        "datasource_port",
+        "listener_port"
+      ],
+      "note": "Both ports stated and equal: no port_mismatch."
+    },
+    {
+      "id": "v3_pg_port_mismatch_words",
+      "issue": "App is pointed at port 5433. The PG server is bound to 5432. Connection fails.",
+      "truth": [
+        "datasource_port",
+        "listener_port",
+        "port_mismatch"
+      ],
+      "note": "Different phrasing for both ports; 'PG' abbreviation. Likely hard for the rules."
+    },
+    {
+      "id": "v3_pg_listener_only",
+      "issue": "postgres listens on 5433 since I changed the config last week, not sure what else I touched",
+      "truth": [
+        "listener_port"
+      ],
+      "note": "Only the server port is stated: no datasource port, no mismatch."
+    },
+    {
+      "id": "v3_pg_wrong_db_fatal",
+      "issue": "Hibernate fails at startup: FATAL: database \"inventory_db\" does not exist (postgres 15)",
+      "truth": [
+        "database_not_found"
+      ],
+      "note": "Literal PostgreSQL error line."
+    },
+    {
+      "id": "v3_pg_wrong_db_hedged",
+      "issue": "maybe the postgres database name is wrong?? not sure it even exists, the app just cant connect",
+      "truth": [],
+      "note": "Hedged claim: labelled empty, same convention as the v2 hedged credentials case."
+    },
+    {
+      "id": "v3_pg_unknown_host_k8s",
+      "issue": "pod log: java.net.UnknownHostException: postgres-svc.default.svc.cluster.local while opening the postgres connection",
+      "truth": [
+        "hostname_unresolved"
+      ],
+      "note": "Literal exception line."
+    },
+    {
+      "id": "v3_pg_host_translate",
+      "issue": "psql: error: could not translate host name \"db-prod\" to address: Name or service not known",
+      "truth": [
+        "hostname_unresolved"
+      ],
+      "note": "psql wording for an unresolved host, no Java exception name."
+    },
+    {
+      "id": "v3_pg_timeout_hikari",
+      "issue": "HikariPool-1 - Connection is not available, request timed out after 30000ms. This is the postgres datasource.",
+      "truth": [
+        "connection_timeout"
+      ],
+      "note": "Pool timeout on the postgres datasource."
+    },
+    {
+      "id": "v3_pg_timeout_firewall",
+      "issue": "connecting to the postgres box from the office network just hangs and then says Connection timed out, but it works from the same subnet",
+      "truth": [
+        "connection_timeout"
+      ],
+      "note": "Timeout wording without Java class names."
+    },
+    {
+      "id": "v3_pg_success_again",
+      "issue": "ok fixed it, my spring app connects to the postgres db again and there are no more errors",
+      "truth": [
+        "connection_success"
+      ],
+      "note": "Casual present-tense success, different wording from earlier sets."
+    },
+    {
+      "id": "v3_pg_success_near_miss",
+      "issue": "my app does not connect to postgres yet, it is still failing after the config change",
+      "truth": [],
+      "note": "Near-miss: looks like the success phrasing but is a failure."
+    },
+    {
+      "id": "v3_pg_not_stopped_simple",
+      "issue": "postgres isn't stopped, I checked, it is up. The app still cannot get in though.",
+      "truth": [
+        "service_running"
+      ],
+      "note": "Simple negation the rule model is expected to handle."
+    },
+    {
+      "id": "v3_pg_not_currently_stopped",
+      "issue": "postgres is not currently stopped, it came back after the restart but the app has not retried yet",
+      "truth": [
+        "service_running"
+      ],
+      "note": "KNOWN LIMITATION: whole-text negation can still emit service_stopped. Expected to fail; report it separately."
+    },
+    {
+      "id": "v3_pg_two_errors_log",
+      "issue": "two errors in the log: FATAL: password authentication failed for user \"svc_orders\" and later FATAL: database \"orders_v2\" does not exist",
+      "truth": [
+        "authentication_failed",
+        "authentication_failure",
+        "database_not_found"
+      ],
+      "note": "Two literal log errors in one report."
+    },
+    {
+      "id": "v3_pg_creds_definite",
+      "issue": "the postgres credentials in application.yml are incorrect, I tried the same ones in psql and they were rejected",
+      "truth": [
+        "credentials_state"
+      ],
+      "note": "Definite statement that credentials are wrong."
+    },
+    {
+      "id": "v3_pg_creds_hedged",
+      "issue": "could be a bad postgres password honestly, I am not sure",
+      "truth": [],
+      "note": "Hedged: labelled empty."
+    },
+    {
+      "id": "v3_pg_vague",
+      "issue": "something is wrong with the database connection, no idea what",
+      "truth": [],
+      "note": "Vague report, nothing to extract."
+    },
+    {
+      "id": "v3_mariadb_down",
+      "issue": "MariaDB service is down on the staging box and the app gets Connection refused on 3306",
+      "truth": [],
+      "note": "Other database; PostgreSQL rules must not fire."
+    },
+    {
+      "id": "v3_mongo_auth",
+      "issue": "MongoServerError: Authentication failed. the mongodb username or password is wrong",
+      "truth": [],
+      "note": "Credentials wording in another database."
+    },
+    {
+      "id": "v3_aws_creds",
+      "issue": "aws s3 ls fails with The security token included in the request is invalid. my access key or secret is incorrect",
+      "truth": [],
+      "note": "Credentials wording in a non-database domain."
+    },
+    {
+      "id": "v3_ssh_timeout",
+      "issue": "ssh to the build server hangs and then prints Connection timed out",
+      "truth": [],
+      "note": "Timeout wording in a non-database domain."
+    },
+    {
+      "id": "v3_elasticsearch_ports",
+      "issue": "elasticsearch is listening on 9200 but the client is configured to use port 9201",
+      "truth": [],
+      "note": "Port-mismatch shape, wrong domain."
+    },
+    {
+      "id": "v3_redis_key_missing",
+      "issue": "the Redis key session:abc does not exist so the cache lookup returns null",
+      "truth": [],
+      "note": "'does not exist' trap, not a missing database."
+    },
+    {
+      "id": "v3_docker_pull_postgres_image",
+      "issue": "docker pull postgres:15 fails with manifest unknown: tag not found",
+      "truth": [],
+      "note": "Mentions postgres but says nothing about connection or service state."
+    }
+  ]
+}
