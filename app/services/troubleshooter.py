@@ -6,6 +6,7 @@ import re
 import threading
 import time
 from collections import deque
+from concurrent.futures import Future
 from pathlib import Path
 
 from fastapi import BackgroundTasks
@@ -42,6 +43,7 @@ from app.services.blueprint_reindex import register_troubleshooter, reindex
 logger = logging.getLogger(__name__)
 
 MAX_CLOUD_LEARNING_CALLS_PER_HOUR = 10
+LEARNING_CLOUD_DEADLINE_SECONDS = 75
 CLOUD_LEARNING_LOG_PATH = (
     Path(__file__).resolve().parents[2] / "data" / "cloud_learning.jsonl"
 )
@@ -485,12 +487,24 @@ class Troubleshooter:
             return finish("example_blueprint_unavailable")
 
         cloud_started = time.perf_counter()
+        cloud_future: Future[str] = Future()
+        prompt = build_prompt(redacted_report, example.model_dump(mode="json"))
+
+        def call_learning_cloud() -> None:
+            try:
+                response = CloudLLM(
+                    model_name=model_name,
+                    timeout=60,
+                    max_retries=0,
+                ).generate_response(prompt)
+                cloud_future.set_result(response)
+            except Exception as exc:
+                cloud_future.set_exception(exc)
+
+        threading.Thread(target=call_learning_cloud, daemon=True).start()
         try:
-            response_text = CloudLLM(
-                model_name=model_name,
-                timeout=60,
-            ).generate_response(
-                build_prompt(redacted_report, example.model_dump(mode="json"))
+            response_text = cloud_future.result(
+                timeout=LEARNING_CLOUD_DEADLINE_SECONDS
             )
             timings_ms["cloud"] = round(
                 (time.perf_counter() - cloud_started) * 1000, 3

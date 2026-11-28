@@ -8,9 +8,16 @@ from demo import learning_demo
 
 
 class MockServer:
-    def __init__(self, scripts, provisional_dir, default_response=None):
+    def __init__(
+        self,
+        scripts,
+        provisional_dir,
+        default_response=None,
+        learning_log_path=None,
+    ):
         self.scripts = scripts
         self.provisional_dir = provisional_dir
+        self.learning_log_path = learning_log_path
         self.default_response = default_response or _local_response()
         self.requests = []
         self._counts = {}
@@ -36,6 +43,10 @@ class MockServer:
                         "{}",
                         encoding="utf-8",
                     )
+                if response.get("log_entry") and outer.learning_log_path is not None:
+                    outer.learning_log_path.parent.mkdir(parents=True, exist_ok=True)
+                    with outer.learning_log_path.open("a", encoding="utf-8") as file:
+                        file.write(json.dumps(response["log_entry"]) + "\n")
                 body = json.dumps({
                     "issue": issue,
                     "solution": response["solution"],
@@ -99,6 +110,11 @@ def _configure_paths(monkeypatch, tmp_path, scenarios):
     monkeypatch.setattr(learning_demo, "STATE_FILE", output_dir / "state.json")
     monkeypatch.setattr(learning_demo, "PROVISIONAL_DIR", provisional_dir)
     monkeypatch.setattr(learning_demo, "APPROVED_DIR", approved_dir)
+    monkeypatch.setattr(
+        learning_demo,
+        "CLOUD_LEARNING_LOG",
+        tmp_path / "cloud_learning.jsonl",
+    )
     monkeypatch.setattr(learning_demo, "POLL_INTERVAL_SECONDS", 0.01)
     monkeypatch.setattr(learning_demo, "POLL_TIMEOUT_SECONDS", 0.04)
     return output_dir, provisional_dir
@@ -118,6 +134,14 @@ def test_learn_records_decline_draft_hit_and_no_draft(
         tmp_path,
         scenarios,
     )
+    timeouts = []
+    real_urlopen = learning_demo.urlopen
+
+    def recording_urlopen(request, timeout):
+        timeouts.append(timeout)
+        return real_urlopen(request, timeout=timeout)
+
+    monkeypatch.setattr(learning_demo, "urlopen", recording_urlopen)
     scripts = {
         scenarios["declined"]: [{
             "solution": (
@@ -138,6 +162,7 @@ def test_learn_records_decline_draft_hit_and_no_draft(
         assert learning_demo.main(["--learn", "--base-url", server.base_url]) == 0
 
     assert len(server.requests) == 7
+    assert timeouts == [200, 200, 120, 120, 120, 200, 200]
     assert all(set(request) == {"issue"} for request in server.requests)
     state = json.loads((output_dir / "state.json").read_text(encoding="utf-8"))
     assert state == {"learned": "new-draft.json"}
@@ -147,6 +172,7 @@ def test_learn_records_decline_draft_hit_and_no_draft(
     assert "| unexpected | first | local |" in summary
     assert "unexpected_hit" in summary
     assert "no_draft" in summary
+    assert "no_log_line" in summary
     assert "draft=new-draft.json; wait=" in summary
 
     records = [
@@ -168,6 +194,53 @@ def test_learn_records_decline_draft_hit_and_no_draft(
     assert "no_draft_repeat1.json" not in {path.name for path in records}
     assert "declined_repeat1.json" not in {path.name for path in records}
     assert capsys.readouterr().out == summary
+
+
+def test_early_exit_note_uses_only_new_log_fields_and_first_timeout(
+    monkeypatch, tmp_path, capsys
+):
+    scenario = "synthetic early exit"
+    output_dir, provisional_dir = _configure_paths(
+        monkeypatch,
+        tmp_path,
+        {"early_exit": scenario},
+    )
+    log_entry = {
+        "reason_code": "invalid_blueprint_id",
+        "timings_ms": {"cloud": 100700.0},
+    }
+    script = {
+        scenario: [{
+            "solution": "PRIVATE RESPONSE TEXT MUST NOT APPEAR",
+            "log_entry": log_entry,
+        }]
+    }
+    timeouts = []
+    real_urlopen = learning_demo.urlopen
+
+    def recording_urlopen(request, timeout):
+        timeouts.append(timeout)
+        return real_urlopen(request, timeout=timeout)
+
+    monkeypatch.setattr(learning_demo, "urlopen", recording_urlopen)
+    with MockServer(
+        script,
+        provisional_dir,
+        learning_log_path=learning_demo.CLOUD_LEARNING_LOG,
+    ) as server:
+        assert learning_demo.main([
+            "--learn",
+            "--base-url",
+            server.base_url,
+            "--first-timeout",
+            "17",
+        ]) == 0
+
+    summary = (output_dir / "summary.md").read_text(encoding="utf-8")
+    assert "invalid_blueprint_id (cloud 100.7 s)" in summary
+    assert "PRIVATE RESPONSE TEXT" not in summary
+    assert timeouts == [17.0]
+    assert "PRIVATE RESPONSE TEXT" not in capsys.readouterr().out
 
 
 def test_refuses_non_localhost_base_url(monkeypatch, tmp_path):

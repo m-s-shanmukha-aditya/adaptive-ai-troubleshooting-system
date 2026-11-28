@@ -218,6 +218,7 @@ def test_build_prompt_orders_instructions_example_then_redacted_report():
     assert "4 to 8 symptoms" in prompt
     assert "4 to 8 useful retrieval tags" in prompt
     assert "report is redacted" in prompt
+    assert "blueprint_id may be any short string" in prompt
 
 
 def test_parse_output_declined_valid_fenced_and_prose_wrapped():
@@ -278,6 +279,69 @@ def test_good_learned_blueprint_passes_checks_end_to_end_and_forces_metadata():
     assert result.observations == {"redis_refused": "connection refused"}
     assert json.loads(result.candidate_json)["resolution_claim"] == "unverified"
     assert provisional_gate(result.blueprint) == []
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "123e4567-e89b-12d3-a456-426614174000",
+        "REDIS CONNECTION REFUSED",
+        "redis connection refused",
+        "../x",
+        "東京",
+    ],
+)
+def test_model_blueprint_id_is_replaced_with_safe_title_id(model_id):
+    result = check_learned_blueprint(
+        "Redis connection refused by the endpoint.",
+        _learned(_blueprint_dict(blueprint_id=model_id)),
+        "test-model",
+        set(),
+    )
+
+    assert result.ok
+    assert result.blueprint.blueprint_id == "redis_connection_refused"
+
+
+@pytest.mark.parametrize("title", ["", "東京"])
+def test_empty_or_non_ascii_title_uses_fallback_blueprint_id(title):
+    result = check_learned_blueprint(
+        "Redis connection refused by the endpoint.",
+        _learned(_blueprint_dict(title=title)),
+        "test-model",
+        set(),
+    )
+
+    assert result.ok
+    assert result.blueprint.blueprint_id == "learned_blueprint"
+
+
+def test_generated_blueprint_id_uses_available_collision_suffix():
+    result = check_learned_blueprint(
+        "Redis connection refused by the endpoint.",
+        _learned(),
+        "test-model",
+        {"redis_connection_refused", "redis_connection_refused_2"},
+    )
+
+    assert result.ok
+    assert result.blueprint.blueprint_id == "redis_connection_refused_3"
+
+
+def test_generated_blueprint_id_reports_collision_after_suffix_99():
+    existing_ids = {"redis_connection_refused"}
+    existing_ids.update(
+        f"redis_connection_refused_{suffix}" for suffix in range(2, 100)
+    )
+    result = check_learned_blueprint(
+        "Redis connection refused by the endpoint.",
+        _learned(),
+        "test-model",
+        existing_ids,
+    )
+
+    assert not result.ok
+    assert result.reason_code == "id_collision"
 
 
 @pytest.mark.parametrize(
@@ -349,7 +413,6 @@ def test_good_learned_blueprint_passes_checks_end_to_end_and_forces_metadata():
             set(),
             "interpreter_not_applicable",
         ),
-        (_blueprint_dict(), _answer(), {"redis_connection_refused"}, "id_collision"),
         (
             _blueprint_dict(
                 observation_rules=[

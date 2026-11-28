@@ -18,7 +18,9 @@ APPROVED_DIR = ROOT / "data" / "blueprints"
 MAX_REQUESTS = 15
 POLL_INTERVAL_SECONDS = 2
 POLL_TIMEOUT_SECONDS = 90
-REQUEST_TIMEOUT_SECONDS = 30
+FIRST_REQUEST_TIMEOUT_SECONDS = 200
+REQUEST_TIMEOUT_SECONDS = 120
+CLOUD_LEARNING_LOG = ROOT / "data" / "cloud_learning.jsonl"
 
 CLOUD_ANSWER_PREFIX = (
     "[Cloud answer, unverified; no approved knowledge existed for this issue]"
@@ -95,20 +97,38 @@ def _diagnosis_id(response_body):
     return diagnosis_id if isinstance(diagnosis_id, str) else "unavailable"
 
 
-def _early_exit_note(response_body):
-    document = _response_document(response_body)
-    solution = document.get("solution", "")
-    if not isinstance(solution, str):
-        return "failed_check"
-    candidate = _candidate_from_solution(solution)
-    diagnosis = candidate.get("diagnosis", {})
-    if (
-        "available information is insufficient" in solution.lower()
-        or isinstance(diagnosis, dict)
-        and diagnosis.get("status") == "insufficient_evidence"
-    ):
-        return "decline"
-    return "failed_check"
+def _learning_log_line_count():
+    try:
+        with CLOUD_LEARNING_LOG.open("r", encoding="utf-8") as file:
+            return sum(1 for _ in file)
+    except FileNotFoundError:
+        return 0
+
+
+def _early_exit_note(lines_before):
+    try:
+        lines = CLOUD_LEARNING_LOG.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return "no_log_line"
+    lines_after = len(lines)
+    new_line_count = lines_after - lines_before
+    for line in reversed(lines[lines_before:lines_before + new_line_count]):
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        reason_code = entry.get("reason_code")
+        timings_ms = entry.get("timings_ms")
+        cloud_ms = timings_ms.get("cloud") if isinstance(timings_ms, dict) else None
+        if (
+            isinstance(reason_code, str)
+            and isinstance(cloud_ms, (int, float))
+            and not isinstance(cloud_ms, bool)
+        ):
+            return f"{reason_code} (cloud {cloud_ms / 1000:.1f} s)"
+    return "no_log_line"
 
 
 def _snapshot(directory):
@@ -128,7 +148,7 @@ def _new_draft(before):
     return new_files[0] if new_files else None
 
 
-def _post_issue(endpoint, issue):
+def _post_issue(endpoint, issue, timeout):
     request = Request(
         endpoint,
         data=json.dumps({"issue": issue}).encode("utf-8"),
@@ -138,7 +158,7 @@ def _post_issue(endpoint, issue):
     started = time.perf_counter()
     http_status = None
     try:
-        with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+        with urlopen(request, timeout=timeout) as response:
             http_status = response.status
             response_body = response.read().decode("utf-8", errors="replace")
     except HTTPError as exc:
@@ -151,15 +171,17 @@ def _post_issue(endpoint, issue):
 
 
 class RequestBudget:
-    def __init__(self, endpoint):
+    def __init__(self, endpoint, first_timeout):
         self.endpoint = endpoint
+        self.first_timeout = first_timeout
         self.count = 0
 
-    def post(self, issue):
+    def post(self, issue, first_phase=False):
         if self.count >= MAX_REQUESTS:
             return None
         self.count += 1
-        return _post_issue(self.endpoint, issue)
+        timeout = self.first_timeout if first_phase else REQUEST_TIMEOUT_SECONDS
+        return _post_issue(self.endpoint, issue, timeout)
 
 
 def _save_response(scenario, phase, issue, result):
@@ -240,14 +262,15 @@ def _learn(scenarios, budget):
 
     for scenario, issue in scenarios.items():
         before = _snapshot(PROVISIONAL_DIR) | _snapshot(APPROVED_DIR)
-        result = budget.post(issue)
+        log_lines_before = _learning_log_line_count()
+        result = budget.post(issue, first_phase=True)
         if result is None:
             cap_reached = True
             break
         first = _save_response(scenario, "first", issue, result)
         if first["stage"] != "cloud_learning":
             note = (
-                _early_exit_note(first["response_body"])
+                _early_exit_note(log_lines_before)
                 if first["stage"] == "early-exit"
                 else "unexpected_hit"
             )
@@ -283,15 +306,20 @@ def _learn(scenarios, budget):
         )
         for repeat_number in range(1, 4):
             phase = f"repeat{repeat_number}"
+            repeat_log_lines_before = _learning_log_line_count()
             repeat_result = budget.post(issue)
             if repeat_result is None:
                 cap_reached = True
                 break
             repeat = _save_response(scenario, phase, issue, repeat_result)
             note = (
-                "expected"
-                if repeat["stage"] == "provisional_local"
-                else "unexpected_stage"
+                _early_exit_note(repeat_log_lines_before)
+                if repeat["stage"] == "early-exit"
+                else (
+                    "expected"
+                    if repeat["stage"] == "provisional_local"
+                    else "unexpected_stage"
+                )
             )
             rows.append(_row(scenario, phase, repeat, note))
         if cap_reached:
@@ -321,6 +349,7 @@ def _after_approval(scenarios, budget):
     for scenario in state:
         if scenario not in scenarios:
             continue
+        log_lines_before = _learning_log_line_count()
         result = budget.post(scenarios[scenario])
         if result is None:
             cap_reached = True
@@ -332,10 +361,14 @@ def _after_approval(scenarios, budget):
             result,
         )
         note = (
-            "expected"
-            if record["stage"] == "local"
-            and PROVISIONAL_PREFIX not in record["response_body"]
-            else "unexpected_stage"
+            _early_exit_note(log_lines_before)
+            if record["stage"] == "early-exit"
+            else (
+                "expected"
+                if record["stage"] == "local"
+                and PROVISIONAL_PREFIX not in record["response_body"]
+                else "unexpected_stage"
+            )
         )
         rows.append(_row(scenario, "after_approval", record, note))
     if cap_reached:
@@ -362,11 +395,17 @@ def main(argv=None):
         default="http://127.0.0.1:8000",
         help="localhost app base URL (default: http://127.0.0.1:8000)",
     )
+    parser.add_argument(
+        "--first-timeout",
+        type=float,
+        default=FIRST_REQUEST_TIMEOUT_SECONDS,
+        help="timeout in seconds for first-phase requests (default: 200)",
+    )
     args = parser.parse_args(argv)
     try:
         endpoint = validate_base_url(args.base_url)
         scenarios = _load_scenarios()
-        budget = RequestBudget(endpoint)
+        budget = RequestBudget(endpoint, args.first_timeout)
         if args.learn:
             _learn(scenarios, budget)
         else:

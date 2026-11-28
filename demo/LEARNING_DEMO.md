@@ -80,6 +80,11 @@
    issue text to the local app; never add real reports, credentials, or keys
    to the scenario file or outputs.
 10. **Troubleshooting.**
+    - The first request for a scenario can take up to about 75 seconds while
+      cloud learning runs. Its HTTP timeout defaults to 200 seconds; change it
+      with `--first-timeout`. Other-phase requests use a 120-second timeout.
+      Read the reason code and cloud duration in the summary note for an
+      early exit.
     - `unexpected_hit`: retrieval matched an existing blueprint, so this run
       cannot demonstrate learning. Choose a scenario farther from PostgreSQL
       or HTTP-gateway topics.

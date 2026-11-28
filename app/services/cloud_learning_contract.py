@@ -38,6 +38,7 @@ def build_prompt(redacted_report: str, example_blueprint_dict: dict) -> str:
 {"blueprint": <ProceduralBlueprint JSON>, "answer": {"diagnosis_id": str, "status": "supported"|"uncertain"|"insufficient_evidence", "evidence_ids": [...], "interpretations": {evidence_id: str}, "action_ids": [...], "follow_up_questions": [...]}}.
 
 The report is redacted. Do not infer or reconstruct removed secrets.
+blueprint_id may be any short string; the system replaces it with a safe ID.
 The blueprint must describe the CLASS of problem, not only this report. Provide a specific title, rich problem_summary, 4 to 8 symptoms, category, and 4 to 8 useful retrieval tags. Retrieval embeds title, problem_summary, symptoms, category, and tags, so choose tags that help a similar later report match. Include title, domain, and aliases; several distinct diagnoses, including a dedicated uncertain/fallback diagnosis with a summary and evidence requirements; read-only actions; canonical lowercase snake_case IDs; and observation rules that follow the ProceduralBlueprint schema. Ensure supporting_evidence IDs can actually be emitted by the blueprint's observation or comparison rules. When selected, the uncertain/fallback diagnosis must use answer status "uncertain".
 Every action ID must start with verify_, inspect_, check_, confirm_, collect_, or request_. Actions must be safe and read-only; do not recommend remediation, configuration changes, or disclosure of credentials.
 Do not include fields outside the stated response shape."""

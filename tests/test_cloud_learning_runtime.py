@@ -175,9 +175,10 @@ def _mock_cloud(monkeypatch, output=None, error=None):
                 raise error
             return output
 
-    def factory(*, model_name, timeout):
+    def factory(*, model_name, timeout, max_retries):
         captured["model_name"] = model_name
         captured["timeout"] = timeout
+        captured["max_retries"] = max_retries
         return FakeCloud()
 
     monkeypatch.setattr(troubleshooter_module, "CloudLLM", factory)
@@ -375,6 +376,7 @@ def test_success_saves_provisional_then_answers_repeat_locally(
     assert saved["generated_by"] == "mock-model"
     assert cloud["model_name"] == "mock-model"
     assert cloud["timeout"] == 60
+    assert cloud["max_retries"] == 0
 
     second = _request(service, issue)
 
@@ -419,6 +421,73 @@ def test_learning_path_does_not_persist_report_or_redacted_secrets(
     assert all("sk-abcdefghijklmnopqrstuvwxyz012345" not in text for text in persisted)
     assert all("alice@example.test" not in text for text in persisted)
     service.repository.save_evaluation.assert_not_called()
+
+
+def test_model_blueprint_id_cannot_escape_provisional_directory(
+    monkeypatch, tmp_path
+):
+    service, provisional_dir = _setup(monkeypatch, tmp_path)
+    blueprint = _blueprint_dict()
+    blueprint["blueprint_id"] = "../../outside"
+    learned = {
+        "blueprint": blueprint,
+        "answer": _answer(),
+    }
+    _mock_cloud(monkeypatch, output=json.dumps(learned))
+
+    response = _request(service, _report())
+
+    assert response.status_code == 200
+    saved_files = list(provisional_dir.glob("*.json"))
+    assert len(saved_files) == 1
+    assert saved_files[0].resolve().parent == provisional_dir.resolve()
+    assert saved_files[0].name == "redis_connection_refused.json"
+    saved = json.loads(saved_files[0].read_text(encoding="utf-8"))
+    assert saved["blueprint_id"] == "redis_connection_refused"
+
+
+def test_learning_cloud_wall_clock_deadline_returns_cloud_timeout(
+    monkeypatch, tmp_path
+):
+    service, _ = _setup(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        troubleshooter_module,
+        "LEARNING_CLOUD_DEADLINE_SECONDS",
+        0.02,
+    )
+    client_started = threading.Event()
+    release_client = threading.Event()
+    client_finished = threading.Event()
+    captured = {}
+
+    class SlowCloud:
+        def generate_response(self, _prompt):
+            client_started.set()
+            release_client.wait(timeout=2)
+            client_finished.set()
+            return "{}"
+
+    def factory(*, model_name, timeout, max_retries):
+        captured.update(
+            model_name=model_name,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+        return SlowCloud()
+
+    monkeypatch.setattr(troubleshooter_module, "CloudLLM", factory)
+    try:
+        response = _request(service, _report())
+        assert response.status_code == 200
+        assert client_started.is_set()
+        assert not client_finished.is_set()
+        assert captured["timeout"] == 60
+        assert captured["max_retries"] == 0
+        assert _log_entries(
+            troubleshooter_module.CLOUD_LEARNING_LOG_PATH
+        )[-1]["reason_code"] == "cloud_timeout"
+    finally:
+        release_client.set()
 
 
 def test_response_body_is_sent_before_blocking_background_task(
@@ -514,3 +583,13 @@ def test_cloud_llm_model_timeout_options_are_optional(monkeypatch):
     existing = cloud_llm_module.CloudLLM(model_name="explicit-model")
     assert existing.model_name == "explicit-model"
     assert "timeout" not in calls[1]
+    assert "max_retries" not in calls[1]
+
+    retry_controlled = cloud_llm_module.CloudLLM(
+        model_name="explicit-model",
+        timeout=60,
+        max_retries=0,
+    )
+    assert retry_controlled.model_name == "explicit-model"
+    assert calls[2]["timeout"] == 60
+    assert calls[2]["max_retries"] == 0

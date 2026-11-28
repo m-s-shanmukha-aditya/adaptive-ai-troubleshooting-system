@@ -42,6 +42,30 @@ def _failed(
     return CheckResult(False, reason_code, blueprint, candidate_json, observations or {})
 
 
+def _generated_blueprint_id(title: Any, existing_ids) -> str | None:
+    title_text = title if isinstance(title, str) else ""
+    base_id = re.sub(r"[^a-z0-9]+", "_", title_text.lower()).strip("_")[:40].strip("_")
+    if len(base_id) < 3:
+        base_id = "learned_blueprint"
+
+    existing = set(existing_ids)
+    if base_id not in existing:
+        blueprint_id = base_id
+    else:
+        blueprint_id = next(
+            (
+                f"{base_id}_{suffix}"
+                for suffix in range(2, 100)
+                if f"{base_id}_{suffix}" not in existing
+            ),
+            None,
+        )
+    if blueprint_id is None:
+        return None
+    assert BLUEPRINT_ID_PATTERN.fullmatch(blueprint_id)
+    return blueprint_id
+
+
 def _candidate_document(answer: dict[str, Any], blueprint: ProceduralBlueprint) -> dict:
     diagnosis_id = answer["diagnosis_id"]
     interpretations = answer["interpretations"]
@@ -107,11 +131,10 @@ def check_learned_blueprint(
         return _failed("invalid_answer")
 
     raw_blueprint = dict(learned["blueprint"])
-    blueprint_id = raw_blueprint.get("blueprint_id")
-    if not isinstance(blueprint_id, str) or not BLUEPRINT_ID_PATTERN.fullmatch(blueprint_id):
-        return _failed("invalid_blueprint_id")
-    if blueprint_id in set(existing_ids):
+    blueprint_id = _generated_blueprint_id(raw_blueprint.get("title"), existing_ids)
+    if blueprint_id is None:
         return _failed("id_collision")
+    raw_blueprint["blueprint_id"] = blueprint_id
 
     raw_blueprint.update(
         status=BlueprintStatus.PROVISIONAL.value,
