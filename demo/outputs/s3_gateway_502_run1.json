@@ -1,0 +1,8 @@
+{
+  "scenario": "s3_gateway_502",
+  "run": 1,
+  "issue": "Users get 502 Bad Gateway from the HTTP gateway and the upstream service is marked unhealthy.",
+  "elapsed_seconds": 18.99158939998597,
+  "http_status": 200,
+  "response_body": "{\"issue\":\"Users get 502 Bad Gateway from the HTTP gateway and the upstream service is marked unhealthy.\",\"solution\":\"No candidate passed runtime validation. Validation issues: invalid_evidence_references, diagnosis_not_supported_by_cited_observations. No diagnosis was validated and no resolution was verified.\"}"
+}

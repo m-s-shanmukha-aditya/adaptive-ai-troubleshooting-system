@@ -1,0 +1,8 @@
+{
+  "scenario": "s1_service_stopped",
+  "run": 1,
+  "issue": "My Spring Boot app cannot connect to PostgreSQL because the PostgreSQL service is stopped.",
+  "elapsed_seconds": 8.60273749998305,
+  "http_status": 200,
+  "response_body": "{\"issue\":\"My Spring Boot app cannot connect to PostgreSQL because the PostgreSQL service is stopped.\",\"solution\":\"[Local candidate selected; runtime diagnosis is not ground-truth verified]\\n\\n{\\\"schema_version\\\":\\\"1\\\",\\n\\\"diagnosis\\\":{\\n  \\\"id\\\":\\\"postgres_service_stopped\\\",\\n  \\\"summary\\\":\\\"The PostgreSQL service is reported stopped, preventing connection to the database.\\\",\\n  \\\"status\\\":\\\"supported\\\"\\n},\\n\\\"evidence\\\":[\\n  {\\n    \\\"observation_id\\\":\\\"service_state\\\",\\n    \\\"interpretation\\\":\\\"The PostgreSQL service is reported as stopped.\\\"\\n  }\\n],\\n\\\"recommended_actions\\\":[\\n  {\\\"action_id\\\":\\\"verify_service_status\\\"},\\n  {\\\"action_id\\\":\\\"check_host_reachability\\\"},\\n  {\\\"action_id\\\":\\\"verify_datasource_url\\\"}\\n],\\n\\\"resolution_claim\\\":\\\"unverified\\\",\\n\\\"follow_up_questions\\\":[]}\\n\\nDiagnosis correctness: unknown. The database connection has not been verified.\"}"
+}

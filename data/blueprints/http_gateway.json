@@ -1,7 +1,7 @@
 {
   "blueprint_id": "bc686ee9-035f-54dc-8a80-972fd5c91b0b",
   "version": "1.0.0",
-  "active": false,
+  "active": true,
   "title": "HTTP Gateway 502 and Unhealthy Upstream",
   "problem_summary": "A reverse proxy or API gateway returns 502 when it cannot connect to a healthy configured upstream.",
   "category": "web_infrastructure",
@@ -25,7 +25,7 @@
     "verify_gateway_target": {"meaning": "Check the configured upstream host and port", "diagnosis_ids": ["gateway_no_healthy_upstream", "gateway_failure_uncertain"]},
     "inspect_gateway_error_logs": {"meaning": "Collect the relevant gateway error details", "diagnosis_ids": ["gateway_failure_uncertain"]}
   },
-  "status": "draft",
+  "status": "approved",
   "success_count": 0,
   "failure_count": 0
 }

@@ -1,7 +1,7 @@
 {
   "blueprint_id": "afd7f1ad-9936-56fe-be55-58fbd41ec5f1",
   "version": "1.0.0",
-  "active": false,
+  "active": true,
   "title": "Spring Boot PostgreSQL Connection Failure",
   "problem_summary": "A Spring Boot application fails to establish a connection to a PostgreSQL database.",
   "category": "database",
@@ -387,7 +387,7 @@
       ]
     }
   },
-  "status": "draft",
+  "status": "approved",
   "success_count": 0,
   "failure_count": 0
 }

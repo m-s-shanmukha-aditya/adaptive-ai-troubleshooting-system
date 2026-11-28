@@ -23,11 +23,14 @@ def test_file_blueprint_ids_are_stable_across_repeated_loads():
     assert all(first.values())
 
 
-def test_existing_blueprints_remain_drafts_and_are_not_runtime_eligible():
+def test_existing_blueprints_are_approved_active_and_runtime_eligible():
     blueprints = load_blueprints()
-    assert all(item.status == BlueprintStatus.DRAFT for item in blueprints)
-    assert all(not item.active for item in blueprints)
-    assert load_blueprints(eligible_only=True) == []
+    # intentional: approved for demo
+    assert all(item.status == BlueprintStatus.APPROVED for item in blueprints)
+    assert all(item.active for item in blueprints)
+    assert {item.blueprint_id for item in load_blueprints(eligible_only=True)} == {
+        item.blueprint_id for item in blueprints
+    }
 
 
 def test_blueprint_content_hash_is_stable_across_loads():

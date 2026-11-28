@@ -1,0 +1,7 @@
+{
+  "s1_service_stopped": "My Spring Boot app cannot connect to PostgreSQL because the PostgreSQL service is stopped.",
+  "s2_port_mismatch": "My Spring Boot datasource port is 5433 but the PostgreSQL server is listening on port 5432, so the connection fails.",
+  "s3_gateway_502": "Users get 502 Bad Gateway from the HTTP gateway and the upstream service is marked unhealthy.",
+  "s4_vague": "Something is wrong with my database connection and I do not know what.",
+  "s5_out_of_domain": "My Kubernetes pod is stuck in CrashLoopBackOff after I updated the deployment image."
+}

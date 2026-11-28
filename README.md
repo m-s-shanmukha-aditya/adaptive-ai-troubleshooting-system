@@ -5,7 +5,7 @@ A Python/FastAPI prototype that analyzes technical issue reports and retrieves a
 # Status
 
 work in progress
-The two blueprints in data/blueprints/ are drafts and are not loaded at runtime. Until a blueprint is approved and active, /troubleshoot returns an insufficient-knowledge response.
+Blueprint approval is an explicit lifecycle step: review the diagnosis, supporting evidence, and allowed actions, then set `status` to `approved` and `active` to `true` in the blueprint JSON. Only approved, active blueprints are eligible for runtime retrieval. The approval and active flags do not change the authored-content hash.
 
 # How it works
 
@@ -36,6 +36,8 @@ From the project root:
 ```powershell
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
+
+For a demo run without cloud requests, start the app with `OPENROUTER_API_KEY` set to an empty string and `PYTHON_DOTENV_DISABLED=1` in its process environment. The local model can run without an OpenRouter key.
 
 # Run tests
 

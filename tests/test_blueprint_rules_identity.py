@@ -48,8 +48,9 @@ def test_json_blueprint_rules_match_fixture_for_every_recorded_input():
     issues = _recorded_issues()
 
     assert len(issues) == 93
-    assert json_blueprint.status.value == "draft"
-    assert json_blueprint.active is False
+    # intentional: approved for demo
+    assert json_blueprint.status.value == "approved"
+    assert json_blueprint.active is True
 
     for filename, case_id, report in issues:
         fixture_output = interpreter.interpret(
