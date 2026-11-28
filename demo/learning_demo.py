@@ -135,6 +135,15 @@ def _early_exit_note(lines_before):
                 ][:10]
                 if safe_errors:
                     note += f"; schema_errors: {', '.join(safe_errors)}"
+            for field in ("applicability_issues", "output_keys"):
+                values = entry.get(field)
+                if isinstance(values, list):
+                    safe_values = [
+                        item for item in values if isinstance(item, str)
+                    ][:3]
+                    if safe_values:
+                        suffix = ", ..." if len(values) > len(safe_values) else ""
+                        note += f"; {field}: {', '.join(safe_values)}{suffix}"
             return note
     return "no_log_line"
 

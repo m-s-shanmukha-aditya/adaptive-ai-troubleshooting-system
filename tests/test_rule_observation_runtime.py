@@ -9,6 +9,7 @@ from app.services.blueprint_loader import load_blueprints
 from app.services.rule_interpreter import (
     MAX_REPORT_CHARS,
     RuleInterpreter,
+    explain_inapplicability,
     interpreter_applicable,
     validate_patterns,
 )
@@ -166,6 +167,51 @@ def test_pattern_validation_rejects_more_than_fifty_total_rules():
     )
 
     assert validate_patterns(blueprint) == ["too_many_rules"]
+
+
+def test_explain_inapplicability_reports_rule_evidence_and_pattern_reasons():
+    no_rules = ProceduralBlueprint.model_construct(
+        observation_rules=[],
+        clarification_rules=[],
+        comparison_rules=[],
+        diagnoses={},
+    )
+    assert explain_inapplicability(no_rules) == ["no_rules"]
+
+    missing_evidence = ProceduralBlueprint.model_construct(
+        observation_rules=[],
+        clarification_rules=[],
+        comparison_rules=[],
+        diagnoses={
+            "example": {
+                "supporting_evidence": [
+                    "unemitted_rule",
+                    "ghp_abcdefghijklmnopqrstuvwxyz012345",
+                ]
+            }
+        },
+    )
+    assert explain_inapplicability(missing_evidence) == [
+        "no_rules",
+        "unemitted_evidence:?",
+        "unemitted_evidence:unemitted_rule",
+    ]
+
+    unsafe_rule = ObservationRule.model_construct(
+        id="unsafe",
+        description="A repeated alternative.",
+        patterns=[r"(a|aa)+$"],
+        polarity="present",
+        supports_diagnoses=[],
+        suppressed_by=[],
+    )
+    unsafe = ProceduralBlueprint.model_construct(
+        observation_rules=[unsafe_rule],
+        clarification_rules=[],
+        comparison_rules=[],
+        diagnoses={},
+    )
+    assert explain_inapplicability(unsafe) == ["pattern:unsafe_quantifier"]
 
 
 def test_approved_blueprints_pass_pattern_validation():

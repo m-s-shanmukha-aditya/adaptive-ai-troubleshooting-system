@@ -14,6 +14,7 @@ from app.models.blueprint import (
     ProceduralBlueprint,
     _has_nested_unbounded_quantifier,
 )
+from app.services.redaction import redact
 
 
 MAX_REPORT_CHARS = 4000
@@ -129,6 +130,42 @@ def interpreter_applicable(blueprint: ProceduralBlueprint) -> bool:
         for evidence_id in definition.get("supporting_evidence", [])
     }
     return required_ids.issubset(emittable_ids)
+
+
+def explain_inapplicability(blueprint: ProceduralBlueprint) -> list[str]:
+    """Return bounded, value-free reasons rule observations cannot apply."""
+    issues = []
+    has_analysis_rules = bool(
+        blueprint.observation_rules
+        or blueprint.clarification_rules
+        or blueprint.comparison_rules
+    )
+    if not has_analysis_rules:
+        issues.append("no_rules")
+
+    emittable_ids = {rule.id for rule in blueprint.observation_rules}
+    emittable_ids.update(rule.id for rule in blueprint.comparison_rules)
+    required_ids = {
+        evidence_id
+        for definition in blueprint.diagnoses.values()
+        for evidence_id in definition.get("supporting_evidence", [])
+    }
+    for evidence_id in sorted(required_ids, key=lambda value: str(value)):
+        if evidence_id in emittable_ids:
+            continue
+        safe_id = (
+            evidence_id
+            if isinstance(evidence_id, str)
+            and re.fullmatch(r"[a-z0-9_]{1,60}", evidence_id)
+            and redact(evidence_id)[0] == evidence_id
+            else "?"
+        )
+        issues.append(f"unemitted_evidence:{safe_id}")
+
+    issues.extend(
+        f"pattern:{issue_code}" for issue_code in validate_patterns(blueprint)
+    )
+    return issues[:10]
 
 
 class InterpretedObservation(BaseModel):

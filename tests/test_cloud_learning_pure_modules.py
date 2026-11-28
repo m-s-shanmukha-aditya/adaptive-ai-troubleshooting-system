@@ -228,6 +228,16 @@ def test_build_prompt_orders_instructions_example_then_redacted_report():
     assert "verification_checks (list)" in prompt
     assert "plain JSON strings" in prompt
     assert "JSON lists" in prompt
+    assert "Every steps item needs an integer step_number, starting at 1." in prompt
+    assert (
+        "Every diagnoses.*.supporting_evidence ID must exactly match an observation "
+        "or comparison rule ID you define."
+    ) in prompt
+    assert (
+        'The top-level JSON must contain both "blueprint" and "answer"; '
+        "answer.diagnosis_id must be one of blueprint.diagnoses."
+    ) in prompt
+    assert "Each observation rule's patterns must literally match words from the report." in prompt
 
 
 def test_parse_output_declined_valid_fenced_and_prose_wrapped():

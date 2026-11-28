@@ -209,6 +209,8 @@ def test_early_exit_note_uses_only_new_log_fields_and_first_timeout(
         "reason_code": "invalid_blueprint_id",
         "timings_ms": {"cloud": 100700.0},
         "schema_errors": ["steps.0.step_number:greater_than"],
+        "applicability_issues": ["unemitted_evidence:signal"],
+        "output_keys": ["blueprint", "answer"],
     }
     script = {
         scenario: [{
@@ -240,6 +242,8 @@ def test_early_exit_note_uses_only_new_log_fields_and_first_timeout(
     summary = (output_dir / "summary.md").read_text(encoding="utf-8")
     assert "invalid_blueprint_id (cloud 100.7 s)" in summary
     assert "schema_errors: steps.0.step_number:greater_than" in summary
+    assert "applicability_issues: unemitted_evidence:signal" in summary
+    assert "output_keys: blueprint, answer" in summary
     assert "PRIVATE RESPONSE TEXT" not in summary
     assert timeouts == [17.0]
     assert "PRIVATE RESPONSE TEXT" not in capsys.readouterr().out

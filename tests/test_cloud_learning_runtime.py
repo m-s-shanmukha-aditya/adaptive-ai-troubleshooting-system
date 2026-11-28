@@ -3,6 +3,7 @@ import threading
 import time
 from unittest.mock import MagicMock
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -427,6 +428,101 @@ def test_invalid_schema_gets_one_repair_attempt_and_saves_valid_draft(
     assert entry["reason_code"] == "saved"
     assert entry["attempts"] == 2
     assert entry["schema_errors"] == ["steps.0.step_number:greater_than_equal"]
+
+
+@pytest.mark.parametrize("failure_kind", ["missing_answer", "inapplicable"])
+def test_missing_answer_and_inapplicable_blueprint_get_one_repair(
+    monkeypatch, tmp_path, failure_kind
+):
+    service, provisional_dir = _setup(monkeypatch, tmp_path)
+    if failure_kind == "missing_answer":
+        initial = json.dumps({"blueprint": _blueprint_dict()})
+        expected_feedback = "return the full object with both blueprint and answer"
+        diagnostic_field = "output_keys"
+    else:
+        blueprint = _blueprint_dict()
+        blueprint["diagnoses"]["redis_connection_refused"][
+            "supporting_evidence"
+        ] = ["unemitted_rule"]
+        initial = _encoded_learned(blueprint)
+        expected_feedback = "interpreter_not_applicable:"
+        diagnostic_field = "applicability_issues"
+    prompts = []
+    outputs = [initial, _encoded_learned()]
+
+    class FakeCloud:
+        def generate_response(self, prompt):
+            prompts.append(prompt)
+            return outputs.pop(0)
+
+    monkeypatch.setattr(
+        troubleshooter_module,
+        "CloudLLM",
+        lambda **_kwargs: FakeCloud(),
+    )
+
+    response = _request(service, _report())
+
+    assert response.status_code == 200
+    assert len(prompts) == 2
+    assert _report() in prompts[1]
+    assert expected_feedback in prompts[1]
+    if failure_kind == "inapplicable":
+        assert '"unemitted_evidence:unemitted_rule"' in prompts[1]
+    assert len(list(provisional_dir.glob("*.json"))) == 1
+    entry = _log_entries(troubleshooter_module.CLOUD_LEARNING_LOG_PATH)[-1]
+    assert entry["reason_code"] == "saved"
+    assert entry["attempts"] == 2
+    assert entry[diagnostic_field]
+
+
+@pytest.mark.parametrize("failure_kind", ["missing_answer", "inapplicable"])
+def test_missing_answer_and_inapplicable_failures_exit_after_one_repair(
+    monkeypatch, tmp_path, failure_kind
+):
+    service, provisional_dir = _setup(monkeypatch, tmp_path)
+    secret = "ghp_abcdefghijklmnopqrstuvwxyz012345"
+    if failure_kind == "missing_answer":
+        initial = json.dumps({
+            "blueprint": _blueprint_dict(),
+            secret: "not logged",
+        })
+        expected_reason = "missing_answer"
+        expected_field = "output_keys"
+    else:
+        blueprint = _blueprint_dict()
+        blueprint["diagnoses"]["redis_connection_refused"][
+            "supporting_evidence"
+        ] = [secret]
+        initial = _encoded_learned(blueprint)
+        expected_reason = "interpreter_not_applicable"
+        expected_field = "applicability_issues"
+    calls = []
+
+    class FakeCloud:
+        def generate_response(self, _prompt):
+            calls.append(1)
+            return initial
+
+    monkeypatch.setattr(
+        troubleshooter_module,
+        "CloudLLM",
+        lambda **_kwargs: FakeCloud(),
+    )
+
+    response = _request(service, _report())
+
+    assert response.status_code == 200
+    assert len(calls) == 2
+    assert list(provisional_dir.glob("*.json")) == []
+    log_line = troubleshooter_module.CLOUD_LEARNING_LOG_PATH.read_text(
+        encoding="utf-8"
+    )
+    entry = json.loads(log_line.splitlines()[-1])
+    assert entry["reason_code"] == expected_reason
+    assert entry["attempts"] == 2
+    assert entry[expected_field]
+    assert secret not in log_line
 
 
 def test_invalid_schema_is_repaired_only_once(monkeypatch, tmp_path):

@@ -35,6 +35,8 @@ from app.services.cloud_learning_contract import (
     Invalid,
     build_prompt,
     build_repair_prompt,
+    output_document,
+    output_keys,
     parse_output,
 )
 from app.services.learning_checks import check_learned_blueprint
@@ -42,6 +44,7 @@ from app.services.redaction import redact, report_hash
 from app.services.rule_interpreter import (
     RuleInterpreter,
     interpreter_applicable,
+    explain_inapplicability,
     observations_by_id,
 )
 from app.services.blueprint_reindex import register_troubleshooter, reindex
@@ -429,6 +432,8 @@ class Troubleshooter:
         blueprint_id = None
         attempts = 0
         schema_errors = ()
+        applicability_issues = []
+        parsed_output_keys = []
 
         def finish(reason_code: str) -> str:
             entry = {
@@ -446,6 +451,10 @@ class Troubleshooter:
                 entry["attempts"] = attempts
             if schema_errors:
                 entry["schema_errors"] = list(schema_errors[:10])
+            if applicability_issues:
+                entry["applicability_issues"] = applicability_issues[:10]
+            if parsed_output_keys:
+                entry["output_keys"] = parsed_output_keys[:10]
             _write_learning_log(entry)
             return self._insufficient_knowledge_response(context)
 
@@ -551,10 +560,10 @@ class Troubleshooter:
             _release_learning_hash(digest)
             return finish("declined")
         if isinstance(parsed, Invalid):
-            _release_learning_hash(digest)
-            return finish(parsed.reason_code)
-
-        check_started = time.perf_counter()
+            parsed_output_keys = output_keys(response_text)
+            if parsed.reason_code != "missing_answer":
+                _release_learning_hash(digest)
+                return finish(parsed.reason_code)
 
         def check_response(parsed_response):
             try:
@@ -580,29 +589,60 @@ class Troubleshooter:
             except Exception:
                 return None
 
-        checked = check_response(parsed)
-        timings_ms["checks"] = round((time.perf_counter() - check_started) * 1000, 3)
-        if checked is None:
-            _release_learning_hash(digest)
-            return finish("deterministic_check_error")
-        if checked.schema_errors:
-            schema_errors = checked.schema_errors
+        checked = None
+        if not isinstance(parsed, Invalid):
+            check_started = time.perf_counter()
+            checked = check_response(parsed)
+            timings_ms["checks"] = round((time.perf_counter() - check_started) * 1000, 3)
+            if checked is None:
+                _release_learning_hash(digest)
+                return finish("deterministic_check_error")
+            if checked.schema_errors:
+                schema_errors = checked.schema_errors
+            if not checked.ok and checked.reason_code == "interpreter_not_applicable":
+                applicability_issues = explain_inapplicability(checked.blueprint)
 
-        if (
-            not checked.ok
+        repair_feedback = None
+        repair_errors = ()
+        if isinstance(parsed, Invalid) and parsed.reason_code == "missing_answer":
+            repair_feedback = "return the full object with both blueprint and answer"
+        elif (
+            checked is not None
+            and not checked.ok
+            and checked.reason_code == "interpreter_not_applicable"
+        ):
+            repair_feedback = (
+                "interpreter_not_applicable: "
+                + json.dumps(applicability_issues[:10], ensure_ascii=True)
+            )
+        elif (
+            checked is not None
+            and not checked.ok
             and checked.reason_code == "invalid_schema"
             and checked.schema_errors
         ):
-            previous_json = json.dumps(
-                {"blueprint": parsed.blueprint, "answer": parsed.answer},
-                ensure_ascii=False,
-                sort_keys=True,
-            )
+            repair_errors = checked.schema_errors
+
+        if repair_feedback is not None or repair_errors:
+            if isinstance(parsed, Invalid):
+                prior_document = output_document(response_text)
+                previous_json = (
+                    json.dumps(prior_document, ensure_ascii=False, sort_keys=True)
+                    if prior_document is not None
+                    else f"Parsed top-level keys: {json.dumps(parsed_output_keys)}"
+                )
+            else:
+                previous_json = json.dumps(
+                    {"blueprint": parsed.blueprint, "answer": parsed.answer},
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
             repair_prompt = build_repair_prompt(
                 redacted_report,
                 example.model_dump(mode="json"),
                 previous_json,
-                checked.schema_errors,
+                repair_errors,
+                repair_feedback,
             )
             try:
                 response_text = wait_for_cloud(repair_prompt)
@@ -627,6 +667,7 @@ class Troubleshooter:
                 _release_learning_hash(digest)
                 return finish("declined")
             if isinstance(parsed, Invalid):
+                parsed_output_keys = output_keys(response_text)
                 _release_learning_hash(digest)
                 return finish(parsed.reason_code)
             check_started = time.perf_counter()
@@ -639,6 +680,8 @@ class Troubleshooter:
                 return finish("deterministic_check_error")
             if checked.schema_errors:
                 schema_errors = checked.schema_errors
+            if not checked.ok and checked.reason_code == "interpreter_not_applicable":
+                applicability_issues = explain_inapplicability(checked.blueprint)
 
         if not checked.ok:
             blueprint_id = (
@@ -664,6 +707,8 @@ class Troubleshooter:
                 started,
                 attempts,
                 schema_errors,
+                applicability_issues,
+                parsed_output_keys,
             )
         except Exception:
             _release_learning_hash(digest)
@@ -684,6 +729,8 @@ class Troubleshooter:
         started: float,
         attempts: int,
         schema_errors: tuple[str, ...],
+        applicability_issues: list[str],
+        output_keys: list[str],
     ) -> None:
         blueprint_id = blueprint.blueprint_id
         reason_code = "background_error"
@@ -740,6 +787,12 @@ class Troubleshooter:
                     if schema_errors
                     else {}
                 ),
+                **(
+                    {"applicability_issues": applicability_issues[:10]}
+                    if applicability_issues
+                    else {}
+                ),
+                **({"output_keys": output_keys[:10]} if output_keys else {}),
                 "timings_ms": {
                     **timings_ms,
                     "total": round((time.perf_counter() - started) * 1000, 3),
