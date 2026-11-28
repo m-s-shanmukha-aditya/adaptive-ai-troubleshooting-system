@@ -1,0 +1,5 @@
+{
+  "k8s_crashloop": "My Kubernetes pod is stuck in CrashLoopBackOff after I updated the deployment image.",
+  "docker_daemon": "docker build fails with Cannot connect to the Docker daemon; the Docker service is not running.",
+  "vague_control": "Something is wrong with my database connection and I do not know what."
+}
