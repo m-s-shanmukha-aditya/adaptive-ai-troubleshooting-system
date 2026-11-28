@@ -1,6 +1,7 @@
 
 import json
 import logging
+import os
 import re
 
 from app.models.generated_response import (
@@ -20,6 +21,10 @@ from app.services.solution_evaluator import SolutionEvaluator
 from app.services.failure_diagnoser import FailureDiagnoser
 from app.services.experience_repository import ExperienceRepository
 from app.services.candidate_selector import CandidateSelector
+from app.services.rule_interpreter import (
+    RuleInterpreter,
+    interpreter_applicable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +73,15 @@ class Troubleshooter:
         for item in related:
             knowledge.diagnoses.update(item.diagnoses)
             knowledge.actions.update(item.actions)
+        if (
+            os.getenv("ENABLE_RULE_OBSERVATIONS", "").strip().lower() == "true"
+            and interpreter_applicable(knowledge)
+        ):
+            interpreted = RuleInterpreter().interpret(issue, knowledge)
+            context.observations = {
+                observation.id: observation.matched_text
+                for observation in interpreted.observations
+            }
         # Runtime mode receives issue evidence only. Controlled fixtures and answer keys
         # remain in TestCaseGenerator and are never loaded into this prompt or evaluator.
         prompt = self._candidate_prompt(issue, context, knowledge)

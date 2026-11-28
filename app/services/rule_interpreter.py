@@ -10,11 +10,125 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.models.blueprint import ProceduralBlueprint
+from app.models.blueprint import (
+    ProceduralBlueprint,
+    _has_nested_unbounded_quantifier,
+)
 
 
 MAX_REPORT_CHARS = 4000
 MAX_MATCHED_TEXT_CHARS = 120
+
+
+def _has_repeated_alternation_group(pattern: str) -> bool:
+    """Conservatively reject quantified groups containing alternatives."""
+    group_has_alternation: list[bool] = []
+    in_character_class = False
+    index = 0
+
+    while index < len(pattern):
+        char = pattern[index]
+        if char == "\\":
+            index += 2
+            continue
+        if in_character_class:
+            if char == "]":
+                in_character_class = False
+            index += 1
+            continue
+        if char == "[":
+            in_character_class = True
+            index += 1
+            continue
+        if char == "(":
+            group_has_alternation.append(False)
+            index += 1
+            continue
+        if char == "|" and group_has_alternation:
+            group_has_alternation[-1] = True
+            index += 1
+            continue
+        if char == ")":
+            if not group_has_alternation:
+                index += 1
+                continue
+            has_alternation = group_has_alternation.pop()
+            if group_has_alternation and has_alternation:
+                group_has_alternation[-1] = True
+
+            quantifier_index = index + 1
+            if quantifier_index < len(pattern) and pattern[quantifier_index] in "*+":
+                if has_alternation:
+                    return True
+            elif quantifier_index < len(pattern) and pattern[quantifier_index] == "{":
+                quantifier = re.match(r"\{(\d+)(?:,(\d*)?)?\}", pattern[quantifier_index:])
+                if quantifier and has_alternation:
+                    lower = int(quantifier.group(1))
+                    upper_text = quantifier.group(2)
+                    is_repeated = (
+                        lower > 1
+                        or ("," in quantifier.group(0) and (upper_text == "" or upper_text is None or int(upper_text) > 1))
+                    )
+                    if is_repeated:
+                        return True
+            index += 1
+            continue
+        index += 1
+
+    return False
+
+
+def validate_patterns(blueprint: ProceduralBlueprint) -> list[str]:
+    """Return safety issue codes for regexes and rule counts on a blueprint."""
+    issues = []
+    rules = (
+        list(blueprint.observation_rules)
+        + list(blueprint.clarification_rules)
+        + list(blueprint.comparison_rules)
+    )
+    if len(rules) > 50:
+        issues.append("too_many_rules")
+
+    for rule in blueprint.observation_rules:
+        for pattern in list(rule.patterns) + list(rule.suppressed_by):
+            if not isinstance(pattern, str):
+                issues.append("invalid_regex")
+                continue
+            if len(pattern) > 300:
+                issues.append("pattern_too_long")
+                continue
+            try:
+                re.compile(pattern)
+            except re.error:
+                issues.append("invalid_regex")
+                continue
+            if (
+                _has_nested_unbounded_quantifier(pattern)
+                or _has_repeated_alternation_group(pattern)
+            ):
+                issues.append("unsafe_quantifier")
+
+    return list(dict.fromkeys(issues))
+
+
+def interpreter_applicable(blueprint: ProceduralBlueprint) -> bool:
+    """Whether rule observations can satisfy every diagnosis evidence ID."""
+    has_analysis_rules = bool(
+        blueprint.observation_rules
+        or blueprint.clarification_rules
+        or blueprint.comparison_rules
+    )
+    if not has_analysis_rules or validate_patterns(blueprint):
+        return False
+
+    emittable_ids = {rule.id for rule in blueprint.observation_rules}
+    emittable_ids.update(rule.id for rule in blueprint.comparison_rules)
+    required_ids = {
+        evidence_id
+        for definition in blueprint.diagnoses.values()
+        for evidence_id in definition.get("supporting_evidence", [])
+    }
+    return required_ids.issubset(emittable_ids)
 
 
 class InterpretedObservation(BaseModel):
@@ -57,6 +171,13 @@ class RuleInterpreter:
         fires. ``matched_rule_ids`` contains only fired observation rules;
         fired clarification rules are listed separately.
         """
+        pattern_issues = validate_patterns(blueprint)
+        if pattern_issues:
+            raise ValueError(
+                "blueprint patterns failed safety validation: "
+                + ", ".join(pattern_issues)
+            )
+
         truncated = len(report_text) > MAX_REPORT_CHARS
         bounded_text = report_text[:MAX_REPORT_CHARS]
         observations = []
