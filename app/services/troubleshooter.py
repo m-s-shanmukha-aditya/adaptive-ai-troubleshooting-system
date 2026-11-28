@@ -434,6 +434,7 @@ class Troubleshooter:
         schema_errors = ()
         applicability_issues = []
         parsed_output_keys = []
+        cloud_http_status = None
 
         def finish(reason_code: str) -> str:
             entry = {
@@ -447,6 +448,8 @@ class Troubleshooter:
                     "total": round((time.perf_counter() - started) * 1000, 3),
                 },
             }
+            if cloud_http_status is not None:
+                entry["cloud_http_status"] = cloud_http_status
             if attempts:
                 entry["attempts"] = attempts
             if schema_errors:
@@ -495,7 +498,11 @@ class Troubleshooter:
         if gate_reason:
             return finish(gate_reason)
 
-        model_name = os.getenv("OPENROUTER_MODEL") or "openrouter/free"
+        model_name = (
+            os.getenv("CLOUD_MODEL")
+            or os.getenv("OPENROUTER_MODEL")
+            or "openrouter/free"
+        )
         try:
             example = next(
                 blueprint
@@ -537,6 +544,23 @@ class Troubleshooter:
             cloud_future = call_learning_cloud(call_prompt)
             return cloud_future.result(timeout=remaining)
 
+        def cloud_failure_reason(exc: Exception) -> str:
+            nonlocal cloud_http_status
+            status_code = getattr(exc, "status_code", None)
+            if isinstance(status_code, int) and not isinstance(status_code, bool):
+                cloud_http_status = status_code
+                if status_code == 429:
+                    return "cloud_rate_limited"
+                if status_code == 402:
+                    return "cloud_payment_required"
+            if isinstance(exc, TimeoutError) or exc.__class__.__name__ in {
+                "APITimeoutError",
+                "ConnectTimeout",
+                "ReadTimeout",
+            }:
+                return "cloud_timeout"
+            return "cloud_error"
+
         try:
             response_text = wait_for_cloud(prompt)
             timings_ms["cloud"] = round(
@@ -547,13 +571,7 @@ class Troubleshooter:
                 (time.perf_counter() - cloud_started) * 1000, 3
             )
             _release_learning_hash(digest)
-            if isinstance(exc, TimeoutError) or exc.__class__.__name__ in {
-                "APITimeoutError",
-                "ConnectTimeout",
-                "ReadTimeout",
-            }:
-                return finish("cloud_timeout")
-            return finish("cloud_error")
+            return finish(cloud_failure_reason(exc))
 
         parsed = parse_output(response_text)
         if isinstance(parsed, Declined):
@@ -651,13 +669,7 @@ class Troubleshooter:
                     (time.perf_counter() - cloud_started) * 1000, 3
                 )
                 _release_learning_hash(digest)
-                if isinstance(exc, TimeoutError) or exc.__class__.__name__ in {
-                    "APITimeoutError",
-                    "ConnectTimeout",
-                    "ReadTimeout",
-                }:
-                    return finish("cloud_timeout")
-                return finish("cloud_error")
+                return finish(cloud_failure_reason(exc))
 
             timings_ms["cloud"] = round(
                 (time.perf_counter() - cloud_started) * 1000, 3

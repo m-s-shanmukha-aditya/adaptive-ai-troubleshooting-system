@@ -333,6 +333,36 @@ def test_cloud_decline_error_timeout_and_invalid_output_abstain(
         )[-1]["reason_code"] == reason
 
 
+@pytest.mark.parametrize(
+    ("status_code", "reason_code"),
+    [
+        (429, "cloud_rate_limited"),
+        (402, "cloud_payment_required"),
+        (503, "cloud_error"),
+    ],
+)
+def test_cloud_http_failures_log_only_status_and_reason(
+    monkeypatch, tmp_path, status_code, reason_code
+):
+    class MockHTTPError(Exception):
+        def __init__(self):
+            super().__init__("private-response-secret")
+            self.status_code = status_code
+
+    service, _ = _setup(monkeypatch, tmp_path)
+    _mock_cloud(monkeypatch, error=MockHTTPError())
+
+    response = _request(service, _report())
+    log_path = troubleshooter_module.CLOUD_LEARNING_LOG_PATH
+    log_text = log_path.read_text(encoding="utf-8")
+    entry = _log_entries(log_path)[-1]
+
+    assert response.status_code == 200
+    assert entry["reason_code"] == reason_code
+    assert entry["cloud_http_status"] == status_code
+    assert "private-response-secret" not in log_text
+
+
 def test_failed_deterministic_check_discards_blueprint(monkeypatch, tmp_path):
     service, provisional_dir = _setup(monkeypatch, tmp_path)
     bad_answer = _answer()
@@ -839,6 +869,7 @@ def test_cloud_llm_model_timeout_options_are_optional(monkeypatch):
     assert client.model_name == "mock-model"
     assert calls[0]["timeout"] == 60
     assert calls[0]["base_url"] == "https://openrouter.ai/api/v1"
+    assert calls[0]["api_key"] == "mock-only-key"
 
     existing = cloud_llm_module.CloudLLM(model_name="explicit-model")
     assert existing.model_name == "explicit-model"
@@ -853,3 +884,91 @@ def test_cloud_llm_model_timeout_options_are_optional(monkeypatch):
     assert retry_controlled.model_name == "explicit-model"
     assert calls[2]["timeout"] == 60
     assert calls[2]["max_retries"] == 0
+
+
+def test_cloud_llm_uses_configured_provider_and_model_precedence(monkeypatch):
+    import app.services.cloud_llm as cloud_llm_module
+
+    values = {
+        "CLOUD_API_KEY_ENV": "GEMINI_API_KEY",
+        "GEMINI_API_KEY": "mock-gemini-key",
+        "CLOUD_BASE_URL": (
+            "https://generativelanguage.googleapis.com/v1beta/openai/"
+        ),
+        "CLOUD_MODEL": "gemini-model",
+        "OPENROUTER_MODEL": "openrouter-model",
+    }
+    calls = []
+
+    monkeypatch.setattr(
+        cloud_llm_module.os,
+        "getenv",
+        lambda name, default=None: values.get(name, default),
+    )
+    monkeypatch.setattr(
+        cloud_llm_module,
+        "OpenAI",
+        lambda **kwargs: calls.append(kwargs) or object(),
+    )
+
+    client = cloud_llm_module.CloudLLM()
+
+    assert client.model_name == "gemini-model"
+    assert calls[0]["api_key"] == "mock-gemini-key"
+    assert calls[0]["base_url"] == values["CLOUD_BASE_URL"]
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ["http://cloud.example.test/v1", "ftp://cloud.example.test/v1"],
+)
+def test_cloud_llm_rejects_non_https_provider_without_exposing_key(
+    monkeypatch, base_url
+):
+    import app.services.cloud_llm as cloud_llm_module
+
+    secret_key = "private-api-key"
+    values = {
+        "OPENROUTER_API_KEY": secret_key,
+        "CLOUD_BASE_URL": base_url,
+    }
+    monkeypatch.setattr(
+        cloud_llm_module.os,
+        "getenv",
+        lambda name, default=None: values.get(name, default),
+    )
+    monkeypatch.setattr(
+        cloud_llm_module,
+        "OpenAI",
+        lambda **_kwargs: pytest.fail("client must not be constructed"),
+    )
+
+    with pytest.raises(ValueError) as error:
+        cloud_llm_module.CloudLLM()
+
+    assert "CLOUD_BASE_URL" in str(error.value)
+    assert secret_key not in str(error.value)
+
+
+def test_cloud_llm_allows_http_localhost(monkeypatch):
+    import app.services.cloud_llm as cloud_llm_module
+
+    calls = []
+    values = {
+        "OPENROUTER_API_KEY": "mock-only-key",
+        "CLOUD_BASE_URL": "http://localhost:8080/v1",
+    }
+    monkeypatch.setattr(
+        cloud_llm_module.os,
+        "getenv",
+        lambda name, default=None: values.get(name, default),
+    )
+    monkeypatch.setattr(
+        cloud_llm_module,
+        "OpenAI",
+        lambda **kwargs: calls.append(kwargs) or object(),
+    )
+
+    cloud_llm_module.CloudLLM()
+
+    assert calls[0]["base_url"] == "http://localhost:8080/v1"

@@ -1,5 +1,14 @@
 # Cloud-learning demo runbook
 
+## Using Google AI Studio (free tier)
+
+Set these variable names in your terminal to use Google AI Studio:
+`CLOUD_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/`,
+`CLOUD_API_KEY_ENV=GEMINI_API_KEY`, and
+`CLOUD_MODEL=<copy the model id from AI Studio>`. Free-tier limits are low per
+minute, so wait about a minute between runs. Google may use free-tier prompts
+to improve its products; send only synthetic, redacted text.
+
 1. **Prerequisites.** Start from a clean `git status` on `refactor/generic-engine`.
    Have Ollama running with `mistral` available. Set these environment variable
    names in your own terminal: `ENABLE_CLOUD_LEARNING=1`,
