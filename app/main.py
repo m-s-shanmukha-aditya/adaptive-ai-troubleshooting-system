@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 import logging
 from pydantic import BaseModel, Field
 
@@ -34,9 +34,15 @@ def health_check():
 
 
 @app.post("/troubleshoot", response_model=TroubleshootResponse)
-def troubleshoot(request: TroubleshootRequest):
+def troubleshoot(
+    request: TroubleshootRequest,
+    background_tasks: BackgroundTasks,
+):
     try:
-        solution = troubleshooter.troubleshoot(request.issue)
+        solution = troubleshooter.troubleshoot(
+            request.issue,
+            background_tasks=background_tasks,
+        )
 
         return TroubleshootResponse(
             issue=request.issue,

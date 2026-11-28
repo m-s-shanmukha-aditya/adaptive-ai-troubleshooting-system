@@ -17,6 +17,7 @@ models/
 !app/models/
 !app/models/*.py
 data/experience.jsonl
+data/cloud_learning.jsonl
 .experience-hash-compat-*.jsonl
 .controlled-results-test.json
 .controlled-runtime-history-test.jsonl

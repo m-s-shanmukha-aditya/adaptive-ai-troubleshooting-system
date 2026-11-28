@@ -4,6 +4,11 @@ import logging
 import os
 import re
 import threading
+import time
+from collections import deque
+from pathlib import Path
+
+from fastapi import BackgroundTasks
 
 from app.models.generated_response import (
     GeneratedTroubleshootingResponse,
@@ -22,14 +27,67 @@ from app.services.solution_evaluator import SolutionEvaluator
 from app.services.failure_diagnoser import FailureDiagnoser
 from app.services.experience_repository import ExperienceRepository
 from app.services.candidate_selector import CandidateSelector
+from app.services import blueprint_loader
+from app.services.blueprint_gate import provisional_gate
+from app.services.cloud_learning_contract import Declined, Invalid, build_prompt, parse_output
+from app.services.learning_checks import check_learned_blueprint
+from app.services.redaction import redact, report_hash
 from app.services.rule_interpreter import (
     RuleInterpreter,
     interpreter_applicable,
     observations_by_id,
 )
-from app.services.blueprint_reindex import register_troubleshooter
+from app.services.blueprint_reindex import register_troubleshooter, reindex
 
 logger = logging.getLogger(__name__)
+
+MAX_CLOUD_LEARNING_CALLS_PER_HOUR = 10
+CLOUD_LEARNING_LOG_PATH = (
+    Path(__file__).resolve().parents[2] / "data" / "cloud_learning.jsonl"
+)
+_learning_lock = threading.RLock()
+_cloud_learning_calls = deque()
+_learning_hashes_in_flight: set[str] = set()
+_learning_hashes_saved: set[str] = set()
+
+
+def _write_learning_log(entry: dict) -> None:
+    with _learning_lock:
+        try:
+            CLOUD_LEARNING_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with CLOUD_LEARNING_LOG_PATH.open("a", encoding="utf-8") as file:
+                file.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
+        except OSError:
+            logger.warning("Cloud learning log write failed")
+
+
+def _saved_learning_hashes() -> set[str]:
+    saved = set()
+    if not CLOUD_LEARNING_LOG_PATH.exists():
+        return saved
+    try:
+        with CLOUD_LEARNING_LOG_PATH.open("r", encoding="utf-8") as file:
+            for line in file:
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get("saved") is True or entry.get("reason_code") in {
+                    "saved",
+                    "file_exists",
+                }:
+                    report_digest = entry.get("report_hash")
+                    if isinstance(report_digest, str):
+                        saved.add(report_digest)
+    except OSError:
+        logger.warning("Cloud learning log read failed")
+    return saved
+
+
+def _optional_critic_hook(blueprint) -> None:
+    """NO-OP hook for an optional critic before provisional persistence."""
 
 
 class Troubleshooter:
@@ -68,7 +126,11 @@ class Troubleshooter:
         with self._retriever_lock:
             self.retriever = next_retriever
 
-    def troubleshoot(self, issue: str) -> str:
+    def troubleshoot(
+        self,
+        issue: str,
+        background_tasks: BackgroundTasks | None = None,
+    ) -> str:
         context = self.analyzer.analyze(issue)
         if context.follow_up_questions:
             return "The available information is insufficient to identify one cause reliably. Please check:\n" + "\n".join(f"- {question}" for question in context.follow_up_questions) + "\nNo diagnosis or resolution has been verified."
@@ -86,12 +148,12 @@ class Troubleshooter:
         results = retriever.retrieve(issue, top_k=5)
 
         if not results:
-            return self._insufficient_knowledge_response(context)
+            return self._learn_on_retrieval_miss(issue, context, background_tasks)
 
         blueprint, score = results[0]
 
         if score < self.MIN_RELEVANCE_SCORE:
-            return self._insufficient_knowledge_response(context)
+            return self._learn_on_retrieval_miss(issue, context, background_tasks)
 
         blueprint_version = self.repository.version(blueprint)
         related = [item for item, relevance in results[1:] if relevance >= self.MIN_RELEVANCE_SCORE]
@@ -100,7 +162,7 @@ class Troubleshooter:
             knowledge.diagnoses.update(item.diagnoses)
             knowledge.actions.update(item.actions)
         if (
-            os.getenv("ENABLE_RULE_OBSERVATIONS", "").strip().lower() == "true"
+            os.getenv("ENABLE_RULE_OBSERVATIONS", "").strip().lower() in {"true", "1"}
             and interpreter_applicable(knowledge)
         ):
             interpreted = RuleInterpreter().interpret(issue, knowledge)
@@ -339,3 +401,243 @@ class Troubleshooter:
             follow_up_questions=questions,
         )
         return candidate.model_dump_json()
+
+    def _learn_on_retrieval_miss(
+        self,
+        issue: str,
+        context: IssueContext,
+        background_tasks: BackgroundTasks | None,
+    ) -> str:
+        started = time.perf_counter()
+        redact_started = time.perf_counter()
+        redacted_report, redaction_counts = redact(issue)
+        digest = report_hash(redacted_report)
+        timings_ms = {
+            "redaction": round((time.perf_counter() - redact_started) * 1000, 3),
+            "cloud": 0.0,
+            "checks": 0.0,
+            "background": None,
+        }
+        blueprint_id = None
+
+        def finish(reason_code: str) -> str:
+            entry = {
+                "report_hash": digest,
+                "reason_code": reason_code,
+                "blueprint_id": blueprint_id,
+                "saved": reason_code in {"saved", "file_exists", "reindex_error"},
+                "redaction_counts": redaction_counts,
+                "timings_ms": {
+                    **timings_ms,
+                    "total": round((time.perf_counter() - started) * 1000, 3),
+                },
+            }
+            _write_learning_log(entry)
+            return self._insufficient_knowledge_response(context)
+
+        disabled_reason = next(
+            (
+                reason
+                for flag, reason in (
+                    ("ENABLE_CLOUD_LEARNING", "cloud_learning_disabled"),
+                    ("ENABLE_PROVISIONAL_BLUEPRINTS", "provisional_blueprints_disabled"),
+                    ("ENABLE_RULE_OBSERVATIONS", "rule_observations_disabled"),
+                )
+                if os.getenv(flag) != "1"
+            ),
+            None,
+        )
+        if disabled_reason:
+            return finish(disabled_reason)
+        if len(issue) < 40:
+            return finish("report_too_short")
+        if background_tasks is None:
+            return finish("background_tasks_unavailable")
+
+        with _learning_lock:
+            _learning_hashes_saved.update(_saved_learning_hashes())
+            now = time.monotonic()
+            while _cloud_learning_calls and now - _cloud_learning_calls[0] >= 3600:
+                _cloud_learning_calls.popleft()
+            if len(_cloud_learning_calls) >= MAX_CLOUD_LEARNING_CALLS_PER_HOUR:
+                gate_reason = "rate_limited"
+            elif digest in _learning_hashes_in_flight:
+                gate_reason = "hash_in_flight"
+            elif digest in _learning_hashes_saved:
+                gate_reason = "hash_already_saved"
+            else:
+                gate_reason = None
+                _learning_hashes_in_flight.add(digest)
+                _cloud_learning_calls.append(now)
+        if gate_reason:
+            return finish(gate_reason)
+
+        model_name = os.getenv("OPENROUTER_MODEL") or "openrouter/free"
+        try:
+            example = next(
+                blueprint
+                for blueprint in self.blueprints
+                if blueprint.blueprint_id == "postgres_connection"
+                or blueprint.title == "Spring Boot PostgreSQL Connection Failure"
+            )
+        except StopIteration:
+            _release_learning_hash(digest)
+            return finish("example_blueprint_unavailable")
+
+        cloud_started = time.perf_counter()
+        try:
+            response_text = CloudLLM(
+                model_name=model_name,
+                timeout=60,
+            ).generate_response(
+                build_prompt(redacted_report, example.model_dump(mode="json"))
+            )
+            timings_ms["cloud"] = round(
+                (time.perf_counter() - cloud_started) * 1000, 3
+            )
+        except Exception as exc:
+            timings_ms["cloud"] = round(
+                (time.perf_counter() - cloud_started) * 1000, 3
+            )
+            _release_learning_hash(digest)
+            if isinstance(exc, TimeoutError) or exc.__class__.__name__ in {
+                "APITimeoutError",
+                "ConnectTimeout",
+                "ReadTimeout",
+            }:
+                return finish("cloud_timeout")
+            return finish("cloud_error")
+
+        parsed = parse_output(response_text)
+        if isinstance(parsed, Declined):
+            _release_learning_hash(digest)
+            return finish("declined")
+        if isinstance(parsed, Invalid):
+            _release_learning_hash(digest)
+            return finish(parsed.reason_code)
+
+        check_started = time.perf_counter()
+        try:
+            existing_ids = {item.blueprint_id for item in self.blueprints}
+            existing_ids.update(
+                item.blueprint_id for item in blueprint_loader.load_blueprints()
+            )
+            for directory in (
+                blueprint_loader.BLUEPRINT_DIR,
+                blueprint_loader.PROVISIONAL_BLUEPRINT_DIR,
+                blueprint_loader.REJECTED_BLUEPRINT_DIR,
+            ):
+                existing_ids.update(path.stem for path in directory.glob("*.json"))
+            checked = check_learned_blueprint(
+                issue,
+                {"blueprint": parsed.blueprint, "answer": parsed.answer},
+                model_name,
+                existing_ids,
+            )
+        except Exception:
+            timings_ms["checks"] = round(
+                (time.perf_counter() - check_started) * 1000, 3
+            )
+            _release_learning_hash(digest)
+            return finish("deterministic_check_error")
+        timings_ms["checks"] = round((time.perf_counter() - check_started) * 1000, 3)
+        if not checked.ok:
+            blueprint_id = (
+                checked.blueprint.blueprint_id if checked.blueprint is not None else None
+            )
+            _release_learning_hash(digest)
+            return finish(checked.reason_code or "deterministic_check_failed")
+
+        blueprint = checked.blueprint
+        blueprint_id = blueprint.blueprint_id
+        blueprint_json = blueprint.model_dump_json()
+        if issue in blueprint_json or redacted_report in blueprint_json:
+            _release_learning_hash(digest)
+            return finish("report_content_detected")
+
+        try:
+            background_tasks.add_task(
+                self._save_provisional_blueprint,
+                blueprint,
+                digest,
+                redaction_counts,
+                timings_ms,
+                started,
+            )
+        except Exception:
+            _release_learning_hash(digest)
+            return finish("background_schedule_error")
+
+        return (
+            "[Cloud answer, unverified; no approved knowledge existed for this issue]"
+            f"\n\n{checked.candidate_json}"
+            "\n\nDiagnosis correctness: unknown. The database connection has not been verified."
+        )
+
+    @staticmethod
+    def _save_provisional_blueprint(
+        blueprint,
+        digest: str,
+        redaction_counts: dict,
+        timings_ms: dict,
+        started: float,
+    ) -> None:
+        blueprint_id = blueprint.blueprint_id
+        reason_code = "background_error"
+        background_started = time.perf_counter()
+        try:
+            if provisional_gate(blueprint):
+                reason_code = "provisional_gate_failed"
+                return
+
+            _optional_critic_hook(blueprint)
+            path = blueprint_loader.PROVISIONAL_BLUEPRINT_DIR / f"{blueprint_id}.json"
+            serialized = json.dumps(
+                blueprint.model_dump(mode="json", exclude_none=True),
+                ensure_ascii=False,
+                indent=2,
+            )
+            with _learning_lock:
+                if path.exists():
+                    _learning_hashes_saved.add(digest)
+                    reason_code = "file_exists"
+                else:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        with path.open("x", encoding="utf-8") as file:
+                            file.write(serialized)
+                    except FileExistsError:
+                        _learning_hashes_saved.add(digest)
+                        reason_code = "file_exists"
+                    else:
+                        _learning_hashes_saved.add(digest)
+                        reason_code = "saved"
+            if reason_code == "saved":
+                try:
+                    reindex()
+                except Exception:
+                    reason_code = "reindex_error"
+        except Exception:
+            reason_code = "background_error"
+        finally:
+            timings_ms["background"] = round(
+                (time.perf_counter() - background_started) * 1000, 3
+            )
+            with _learning_lock:
+                _learning_hashes_in_flight.discard(digest)
+            _write_learning_log({
+                "report_hash": digest,
+                "reason_code": reason_code,
+                "blueprint_id": blueprint_id,
+                "saved": reason_code in {"saved", "file_exists", "reindex_error"},
+                "redaction_counts": redaction_counts,
+                "timings_ms": {
+                    **timings_ms,
+                    "total": round((time.perf_counter() - started) * 1000, 3),
+                },
+            })
+
+
+def _release_learning_hash(digest: str) -> None:
+    with _learning_lock:
+        _learning_hashes_in_flight.discard(digest)
