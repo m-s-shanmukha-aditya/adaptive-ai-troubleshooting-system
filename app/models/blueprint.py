@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum
 import hashlib
 import json
+import os
 import re
 from typing import Literal
 from uuid import uuid4
@@ -109,6 +110,7 @@ def _has_nested_unbounded_quantifier(pattern: str) -> bool:
 class BlueprintStatus(str, Enum):
     DRAFT = "draft"
     APPROVED = "approved"
+    PROVISIONAL = "provisional"
     DEPRECATED = "deprecated"
     ARCHIVED = "archived"
     # Legacy states remain parseable but are not runtime eligible.
@@ -239,6 +241,11 @@ class ProceduralBlueprint(BaseModel):
     unverified_notice: str | None = None
 
     status: BlueprintStatus = BlueprintStatus.DRAFT
+    source: str | None = None
+    generated_by: str | None = None
+    generated_on: str | None = None
+    reviewed_by: str | None = None
+    reviewed_on: str | None = None
 
     success_count: int = Field(default=0, ge=0)
     failure_count: int = Field(default=0, ge=0)
@@ -323,6 +330,7 @@ class ProceduralBlueprint(BaseModel):
             exclude={
                 "blueprint_id", "version", "active", "status",
                 "success_count", "failure_count", "created_at", "updated_at",
+                "source", "generated_by", "generated_on", "reviewed_by", "reviewed_on",
             },
         )
         for field in _ANALYSIS_CONTENT_FIELDS:
@@ -337,4 +345,10 @@ class ProceduralBlueprint(BaseModel):
 
     @property
     def runtime_eligible(self) -> bool:
-        return self.status == BlueprintStatus.APPROVED and self.active
+        if self.status == BlueprintStatus.APPROVED and self.active:
+            return True
+        return (
+            self.status == BlueprintStatus.PROVISIONAL
+            and self.active
+            and os.getenv("ENABLE_PROVISIONAL_BLUEPRINTS", "").strip() == "1"
+        )

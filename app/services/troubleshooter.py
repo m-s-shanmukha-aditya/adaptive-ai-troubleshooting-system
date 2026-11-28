@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import threading
 
 from app.models.generated_response import (
     GeneratedTroubleshootingResponse,
@@ -25,6 +26,7 @@ from app.services.rule_interpreter import (
     RuleInterpreter,
     interpreter_applicable,
 )
+from app.services.blueprint_reindex import register_troubleshooter
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,7 @@ class Troubleshooter:
         # keeps simple/incomplete requests cheap and avoids loading ML stacks
         # for requests that do not enter retrieval.
         self.retriever = None
+        self._retriever_lock = threading.RLock()
         self.llm = LocalLLM()
         self.max_repairs = max_repairs
         self.analyzer = IssueAnalyzer()
@@ -47,17 +50,39 @@ class Troubleshooter:
         self.diagnoser = FailureDiagnoser()
         self.selector = CandidateSelector()
         self.repository = repository or ExperienceRepository()
+        register_troubleshooter(self)
+
+    def replace_retriever(self, blueprints) -> None:
+        with self._retriever_lock:
+            model_name = (
+                getattr(
+                    self.retriever,
+                    "model_name",
+                    "sentence-transformers/all-MiniLM-L6-v2",
+                )
+                if self.retriever is not None
+                else "sentence-transformers/all-MiniLM-L6-v2"
+            )
+        next_retriever = SemanticRetriever(blueprints, model_name=model_name)
+        with self._retriever_lock:
+            self.retriever = next_retriever
 
     def troubleshoot(self, issue: str) -> str:
         context = self.analyzer.analyze(issue)
         if context.follow_up_questions:
             return "The available information is insufficient to identify one cause reliably. Please check:\n" + "\n".join(f"- {question}" for question in context.follow_up_questions) + "\nNo diagnosis or resolution has been verified."
         eligible_blueprints = load_blueprints(eligible_only=True)
-        if self.retriever is None:
-            self.retriever = SemanticRetriever(eligible_blueprints)
-        else:
-            self.retriever.rebuild(eligible_blueprints)
-        results = self.retriever.retrieve(issue, top_k=5)
+        with self._retriever_lock:
+            if self.retriever is None:
+                self.retriever = SemanticRetriever(eligible_blueprints)
+                retriever = self.retriever
+                rebuild = False
+            else:
+                retriever = self.retriever
+                rebuild = True
+        if rebuild:
+            retriever.rebuild(eligible_blueprints)
+        results = retriever.retrieve(issue, top_k=5)
 
         if not results:
             return self._insufficient_knowledge_response(context)
@@ -165,6 +190,8 @@ class Troubleshooter:
             diagnostic_status=context.diagnostic_status,
         )
         prefix = f"[{source} candidate selected; runtime diagnosis is not ground-truth verified]"
+        if blueprint.status.value == "provisional":
+            prefix = "[Provisional blueprint: auto-generated, not yet reviewed]\n" + prefix
         return prefix + "\n\n" + selected.candidate + "\n\nDiagnosis correctness: unknown. The database connection has not been verified."
 
     @staticmethod

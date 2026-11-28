@@ -1,5 +1,6 @@
 
 import json
+import os
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
@@ -8,12 +9,26 @@ from app.models.blueprint import ProceduralBlueprint
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BLUEPRINT_DIR = PROJECT_ROOT / "data" / "blueprints"
+PROVISIONAL_BLUEPRINT_DIR = PROJECT_ROOT / "data" / "blueprints_provisional"
+REJECTED_BLUEPRINT_DIR = PROJECT_ROOT / "data" / "blueprints_rejected"
+
+
+def provisional_blueprints_enabled() -> bool:
+    return os.getenv("ENABLE_PROVISIONAL_BLUEPRINTS", "").strip() == "1"
 
 
 def load_blueprints(*, eligible_only: bool = False) -> list[ProceduralBlueprint]:
     blueprints = []
 
-    for file_path in sorted(BLUEPRINT_DIR.glob("*.json")):
+    directories = [BLUEPRINT_DIR]
+    if provisional_blueprints_enabled():
+        directories.append(PROVISIONAL_BLUEPRINT_DIR)
+
+    for file_path in sorted(
+        file_path
+        for directory in directories
+        for file_path in directory.glob("*.json")
+    ):
         with file_path.open("r", encoding="utf-8") as file:
             data = json.load(file)
 
