@@ -1,0 +1,219 @@
+{
+  "blueprint_id": "kubernetes_pod_crashloopbackoff_troubles",
+  "version": "1.0.0",
+  "active": false,
+  "title": "Kubernetes Pod CrashLoopBackOff Troubleshooting",
+  "problem_summary": "A Kubernetes pod repeatedly crashes and enters CrashLoopBackOff state after deployment or image updates.",
+  "category": "container_orchestration",
+  "symptoms": [
+    "CrashLoopBackOff",
+    "Pod restarts frequently",
+    "Container fails to start",
+    "Exit code non-zero"
+  ],
+  "environment": {
+    "container_runtime": "containerd",
+    "orchestrator": "Kubernetes"
+  },
+  "preconditions": [
+    "Kubernetes cluster is accessible",
+    "kubectl is configured"
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "instruction": "Inspect Kubernetes pod events.",
+      "expected_result": "Pod events show the reason for container termination.",
+      "failure_action": "Describe the pod using kubectl."
+    },
+    {
+      "step_number": 2,
+      "instruction": "Review container logs.",
+      "expected_result": "Container logs reveal startup exceptions or exit codes.",
+      "failure_action": "Check previous container logs using kubectl logs --previous."
+    },
+    {
+      "step_number": 3,
+      "instruction": "Check resource limits and health probes.",
+      "expected_result": "Resource limits and probes are correctly configured.",
+      "failure_action": "Adjust resource requests or probe thresholds."
+    }
+  ],
+  "verification_checks": [
+    {
+      "description": "Verify pod stability.",
+      "success_condition": "The pod is in Running state with 0 restarts in a stable window."
+    }
+  ],
+  "tags": [
+    "kubernetes",
+    "k8s",
+    "crashloopbackoff",
+    "pod",
+    "deployment",
+    "containers"
+  ],
+  "diagnoses": {
+    "entrypoint_misconfiguration": {
+      "meaning": "Container fails due to incorrect entrypoint or executable",
+      "supporting_evidence": [
+        "entrypoint_error"
+      ]
+    },
+    "missing_configuration": {
+      "meaning": "Application fails to start due to missing environment variables or config",
+      "supporting_evidence": [
+        "missing_env"
+      ]
+    },
+    "pod_crash_loop_uncertain": {
+      "meaning": "Kubernetes pod is crashing repeatedly without a single isolated root cause yet",
+      "supporting_evidence": []
+    },
+    "probe_misconfiguration": {
+      "meaning": "Liveness or readiness probe is failing and restarting the container",
+      "supporting_evidence": [
+        "probe_failure"
+      ]
+    },
+    "resource_exhaustion": {
+      "meaning": "Container is terminated due to exceeding resource limits like OOMKilled",
+      "supporting_evidence": [
+        "oom_killed"
+      ]
+    }
+  },
+  "actions": {
+    "check_container_logs": {
+      "diagnosis_ids": [
+        "pod_crash_loop_uncertain"
+      ],
+      "meaning": "Inspect container logs for startup errors"
+    },
+    "check_liveness_probe": {
+      "diagnosis_ids": [
+        "probe_misconfiguration"
+      ],
+      "meaning": "Verify health check and probe settings"
+    },
+    "check_resource_limits": {
+      "diagnosis_ids": [
+        "resource_exhaustion"
+      ],
+      "meaning": "Check container memory and CPU limits"
+    },
+    "inspect_image_entrypoint": {
+      "diagnosis_ids": [
+        "entrypoint_misconfiguration"
+      ],
+      "meaning": "Verify image entrypoint and command arguments"
+    },
+    "inspect_pod_events": {
+      "diagnosis_ids": [
+        "pod_crash_loop_uncertain"
+      ],
+      "meaning": "Review Kubernetes pod events for failure reasons"
+    },
+    "verify_config_secrets": {
+      "diagnosis_ids": [
+        "missing_configuration"
+      ],
+      "meaning": "Verify required environment variables and secrets"
+    }
+  },
+  "domain": "kubernetes",
+  "aliases": [
+    "k8s",
+    "kubernetes pod",
+    "crashloopbackoff",
+    "deployment"
+  ],
+  "observation_rules": [
+    {
+      "id": "crash_loop",
+      "description": "The report indicates the pod is in CrashLoopBackOff.",
+      "patterns": [
+        "CrashLoopBackOff"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [],
+      "suppressed_by": []
+    },
+    {
+      "id": "image_update",
+      "description": "The report mentions an updated deployment image.",
+      "patterns": [
+        "updated the deployment image",
+        "image"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [],
+      "suppressed_by": []
+    },
+    {
+      "id": "oom_killed",
+      "description": "Container terminated due to out of memory.",
+      "patterns": [
+        "OOMKilled",
+        "out of memory"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [
+        "resource_exhaustion"
+      ],
+      "suppressed_by": []
+    },
+    {
+      "id": "probe_failure",
+      "description": "Liveness or readiness probe failed.",
+      "patterns": [
+        "Probe failed",
+        "Liveness probe failed",
+        "Readiness probe failed"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [
+        "probe_misconfiguration"
+      ],
+      "suppressed_by": []
+    },
+    {
+      "id": "missing_env",
+      "description": "Missing environment variable or configmap error.",
+      "patterns": [
+        "environment variable",
+        "ConfigMap",
+        "Secret not found"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [
+        "missing_configuration"
+      ],
+      "suppressed_by": []
+    },
+    {
+      "id": "entrypoint_error",
+      "description": "Executable or entrypoint not found.",
+      "patterns": [
+        "executable file not found",
+        "No such file or directory"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [
+        "entrypoint_misconfiguration"
+      ],
+      "suppressed_by": []
+    }
+  ],
+  "clarification_rules": [],
+  "comparison_rules": [],
+  "extra_unsafe_phrases": [],
+  "status": "rejected",
+  "source": "cloud",
+  "generated_by": "gemini-3.5-flash-lite",
+  "generated_on": "2026-11-28",
+  "success_count": 0,
+  "failure_count": 0,
+  "created_at": "2026-11-28T18:08:32.736270Z",
+  "updated_at": "2026-11-28T18:08:32.736270Z"
+}

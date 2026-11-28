@@ -1,0 +1,9 @@
+{
+  "scenario": "docker_daemon",
+  "phase": "repeat1",
+  "issue": "docker build fails with Cannot connect to the Docker daemon; the Docker service is not running.",
+  "http_status": 200,
+  "seconds": 6.064,
+  "stage": "provisional_local",
+  "response_body": "{\"issue\":\"docker build fails with Cannot connect to the Docker daemon; the Docker service is not running.\",\"solution\":\"[Provisional blueprint: auto-generated, not yet reviewed]\\n[Local candidate selected; runtime diagnosis is not ground-truth verified]\\n\\n{\\\"schema_version\\\":\\\"1\\\",\\n\\\"diagnosis\\\":{\\n  \\\"id\\\":\\\"docker_service_stopped\\\",\\n  \\\"summary\\\":\\\"The Docker service is not running, causing a connection failure.\\\",\\n  \\\"status\\\":\\\"supported\\\"\\n},\\n\\\"evidence\\\":[\\n  {\\\"observation_id\\\":\\\"service_stopped\\\",\\\"interpretation\\\":\\\"Docker service is not running\\\"}\\n],\\n\\\"recommended_actions\\\":[\\n  {\\\"action_id\\\":\\\"check_docker_service_status\\\",\\\"description\\\":\\\"Check whether the Docker daemon service is active.\\\"}\\n],\\n\\\"resolution_claim\\\":\\\"unverified\\\",\\n\\\"follow_up_questions\\\":[]\\n}\\n\\nDiagnosis correctness: unknown. The database connection has not been verified.\"}"
+}

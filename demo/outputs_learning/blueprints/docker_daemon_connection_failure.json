@@ -1,0 +1,166 @@
+{
+  "blueprint_id": "docker_daemon_connection_failure",
+  "version": "1.0.0",
+  "active": true,
+  "title": "Docker Daemon Connection Failure",
+  "problem_summary": "Docker commands fail to execute because the client cannot establish a connection to the Docker daemon.",
+  "category": "containerization",
+  "symptoms": [
+    "Cannot connect to the Docker daemon",
+    "docker build fails",
+    "Daemon not running",
+    "Connection refused to docker socket"
+  ],
+  "environment": {
+    "operating_system": "Linux / macOS / Windows",
+    "tool": "Docker"
+  },
+  "preconditions": [
+    "Docker is installed on the host system",
+    "The user has rights to invoke docker commands"
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "instruction": "Check whether the Docker daemon service is running.",
+      "expected_result": "The Docker daemon service is active.",
+      "failure_action": "Start the Docker service only after confirming it is stopped."
+    },
+    {
+      "step_number": 2,
+      "instruction": "Inspect Docker socket file permissions.",
+      "expected_result": "Docker socket permissions allow user access.",
+      "failure_action": "Verify user group memberships for Docker."
+    }
+  ],
+  "verification_checks": [
+    {
+      "description": "Verify Docker CLI successfully connects to the daemon.",
+      "success_condition": "Docker commands execute without daemon connection errors."
+    }
+  ],
+  "tags": [
+    "docker",
+    "docker-build",
+    "docker-daemon",
+    "containerization",
+    "service-stopped",
+    "devops"
+  ],
+  "diagnoses": {
+    "docker_connection_uncertain": {
+      "meaning": "Evidence does not yet isolate a specific Docker connection cause",
+      "supporting_evidence": []
+    },
+    "docker_service_running": {
+      "meaning": "Docker daemon service is reported running",
+      "supporting_evidence": [
+        "service_running"
+      ]
+    },
+    "docker_service_stopped": {
+      "meaning": "Docker daemon service is reported stopped or not running",
+      "supporting_evidence": [
+        "service_stopped"
+      ]
+    },
+    "docker_socket_permission_issue": {
+      "meaning": "Docker socket permissions prevent client access",
+      "supporting_evidence": [
+        "socket_permission"
+      ]
+    }
+  },
+  "actions": {
+    "check_docker_service_status": {
+      "diagnosis_ids": [
+        "docker_service_stopped"
+      ],
+      "meaning": "Check whether the Docker daemon service is active"
+    },
+    "confirm_docker_daemon_running": {
+      "diagnosis_ids": [
+        "docker_service_running"
+      ],
+      "meaning": "Confirm Docker daemon is running and responding"
+    },
+    "inspect_docker_error": {
+      "diagnosis_ids": [
+        "docker_connection_uncertain"
+      ],
+      "meaning": "Inspect the exact reported Docker error message"
+    },
+    "request_docker_environment_details": {
+      "diagnosis_ids": [
+        "docker_connection_uncertain"
+      ],
+      "meaning": "Request relevant system and service status details"
+    },
+    "verify_docker_socket": {
+      "diagnosis_ids": [
+        "docker_socket_permission_issue",
+        "docker_connection_uncertain"
+      ],
+      "meaning": "Verify Docker socket file permissions and existence"
+    }
+  },
+  "domain": "docker",
+  "aliases": [
+    "docker",
+    "docker build",
+    "docker daemon",
+    "dockerd"
+  ],
+  "observation_rules": [
+    {
+      "id": "service_stopped",
+      "description": "The report states that the Docker service is not running.",
+      "patterns": [
+        "\\bdocker\\s+service\\s+is\\s+not\\s+running\\b"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [],
+      "suppressed_by": []
+    },
+    {
+      "id": "service_running",
+      "description": "The report states that Docker daemon is running.",
+      "patterns": [
+        "\\bdocker\\s+daemon\\s+is\\s+running\\b",
+        "\\bdocker\\s+service\\s+is\\s+active\\b"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [],
+      "suppressed_by": []
+    },
+    {
+      "id": "socket_permission",
+      "description": "The report mentions permission denied on the Docker socket.",
+      "patterns": [
+        "\\bpermission\\s+denied\\s+while\\s+trying\\s+to\\s+connect\\s+to\\s+the\\s+docker\\s+daemon\\s+socket\\b"
+      ],
+      "polarity": "present",
+      "supports_diagnoses": [],
+      "suppressed_by": []
+    }
+  ],
+  "clarification_rules": [
+    {
+      "id": "clarify_docker_service_state",
+      "when_missing": [],
+      "question": "Is the Docker service currently active, or does it fail to start when invoked?"
+    }
+  ],
+  "comparison_rules": [],
+  "extra_unsafe_phrases": [],
+  "status": "approved",
+  "source": "cloud",
+  "generated_by": "gemini-3.5-flash-lite",
+  "generated_on": "2026-11-28",
+  "reviewed_by": "Shanmukha Aditya",
+  "reviewed_on": "2026-11-28",
+  "success_count": 0,
+  "failure_count": 0,
+  "created_at": "2026-11-28T18:08:32.736270Z",
+  "updated_at": "2026-11-28T18:08:32.736270Z"
+}

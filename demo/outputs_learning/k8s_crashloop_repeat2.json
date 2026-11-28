@@ -1,0 +1,9 @@
+{
+  "scenario": "k8s_crashloop",
+  "phase": "repeat2",
+  "issue": "My Kubernetes pod is stuck in CrashLoopBackOff after I updated the deployment image.",
+  "http_status": 200,
+  "seconds": 6.066,
+  "stage": "provisional_local",
+  "response_body": "{\"issue\":\"My Kubernetes pod is stuck in CrashLoopBackOff after I updated the deployment image.\",\"solution\":\"[Provisional blueprint: auto-generated, not yet reviewed]\\n[Local candidate selected; runtime diagnosis is not ground-truth verified]\\n\\n{\\\"schema_version\\\":\\\"1\\\",\\n\\\"diagnosis\\\":{\\n  \\\"id\\\":\\\"pod_crash_loop_uncertain\\\",\\n  \\\"summary\\\":\\\"The Kubernetes pod is stuck in CrashLoopBackOff after updating the deployment image, which may be due to incorrect resource limits, health probes, or container startup issues.\\\",\\n  \\\"status\\\":\\\"uncertain\\\"\\n},\\n\\\"evidence\\\":[\\n  {\\\"observation_id\\\":\\\"crash_loop\\\", \\\"interpretation\\\":\\\"The pod is in CrashLoopBackOff state\\\"}\\n],\\n\\\"recommended_actions\\\":[\\n  {\\\"action_id\\\":\\\"inspect_pod_events\\\"},\\n  {\\\"action_id\\\":\\\"check_container_logs\\\"}\\n],\\n\\\"resolution_claim\\\":\\\"unverified\\\",\\n\\\"follow_up_questions\\\":[]}\\n\\nDiagnosis correctness: unknown. The database connection has not been verified.\"}"
+}

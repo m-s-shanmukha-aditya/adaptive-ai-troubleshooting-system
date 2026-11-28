@@ -1,0 +1,9 @@
+{
+  "scenario": "docker_daemon",
+  "phase": "first",
+  "issue": "docker build fails with Cannot connect to the Docker daemon; the Docker service is not running.",
+  "http_status": 200,
+  "seconds": 8.681,
+  "stage": "cloud_learning",
+  "response_body": "{\"issue\":\"docker build fails with Cannot connect to the Docker daemon; the Docker service is not running.\",\"solution\":\"[Cloud answer, unverified; no approved knowledge existed for this issue]\\n\\n{\\\"schema_version\\\":\\\"1\\\",\\\"diagnosis\\\":{\\\"id\\\":\\\"docker_service_stopped\\\",\\\"summary\\\":\\\"\\\",\\\"status\\\":\\\"supported\\\"},\\\"evidence\\\":[{\\\"observation_id\\\":\\\"service_stopped\\\",\\\"interpretation\\\":\\\"The report explicitly states that the Docker service is not running and cannot connect to the daemon.\\\"}],\\\"recommended_actions\\\":[{\\\"action_id\\\":\\\"check_docker_service_status\\\",\\\"description\\\":\\\"Check whether the Docker daemon service is active\\\"}],\\\"resolution_claim\\\":\\\"unverified\\\",\\\"follow_up_questions\\\":[\\\"Is the Docker daemon service active or able to be started on this host?\\\"]}\\n\\nDiagnosis correctness: unknown. The database connection has not been verified.\"}"
+}
