@@ -127,7 +127,15 @@ def _early_exit_note(lines_before):
             and isinstance(cloud_ms, (int, float))
             and not isinstance(cloud_ms, bool)
         ):
-            return f"{reason_code} (cloud {cloud_ms / 1000:.1f} s)"
+            note = f"{reason_code} (cloud {cloud_ms / 1000:.1f} s)"
+            schema_errors = entry.get("schema_errors")
+            if isinstance(schema_errors, list):
+                safe_errors = [
+                    item for item in schema_errors if isinstance(item, str)
+                ][:10]
+                if safe_errors:
+                    note += f"; schema_errors: {', '.join(safe_errors)}"
+            return note
     return "no_log_line"
 
 

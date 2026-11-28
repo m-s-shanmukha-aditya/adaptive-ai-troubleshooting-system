@@ -31,6 +31,7 @@ class CheckResult:
     blueprint: ProceduralBlueprint | None
     candidate_json: str | None
     observations: dict[str, str]
+    schema_errors: tuple[str, ...] = ()
 
 
 def _failed(
@@ -38,8 +39,24 @@ def _failed(
     blueprint: ProceduralBlueprint | None = None,
     candidate_json: str | None = None,
     observations: dict[str, str] | None = None,
+    schema_errors: tuple[str, ...] = (),
 ) -> CheckResult:
-    return CheckResult(False, reason_code, blueprint, candidate_json, observations or {})
+    return CheckResult(
+        False,
+        reason_code,
+        blueprint,
+        candidate_json,
+        observations or {},
+        schema_errors,
+    )
+
+
+def _schema_errors(error: ValidationError) -> tuple[str, ...]:
+    result = []
+    for item in error.errors(include_url=False)[:10]:
+        path = ".".join(str(part) for part in item["loc"])
+        result.append(f"{path}:{item['type']}")
+    return tuple(result)
 
 
 def _generated_blueprint_id(title: Any, existing_ids) -> str | None:
@@ -161,7 +178,9 @@ def check_learned_blueprint(
 
     try:
         blueprint = ProceduralBlueprint.model_validate(raw_blueprint)
-    except (ValidationError, TypeError, ValueError):
+    except ValidationError as exc:
+        return _failed("invalid_schema", schema_errors=_schema_errors(exc))
+    except (TypeError, ValueError):
         return _failed("invalid_schema")
 
     gate_issues = provisional_gate(blueprint)

@@ -30,7 +30,13 @@ from app.services.experience_repository import ExperienceRepository
 from app.services.candidate_selector import CandidateSelector
 from app.services import blueprint_loader
 from app.services.blueprint_gate import provisional_gate
-from app.services.cloud_learning_contract import Declined, Invalid, build_prompt, parse_output
+from app.services.cloud_learning_contract import (
+    Declined,
+    Invalid,
+    build_prompt,
+    build_repair_prompt,
+    parse_output,
+)
 from app.services.learning_checks import check_learned_blueprint
 from app.services.redaction import redact, report_hash
 from app.services.rule_interpreter import (
@@ -43,7 +49,7 @@ from app.services.blueprint_reindex import register_troubleshooter, reindex
 logger = logging.getLogger(__name__)
 
 MAX_CLOUD_LEARNING_CALLS_PER_HOUR = 10
-LEARNING_CLOUD_DEADLINE_SECONDS = 75
+LEARNING_CLOUD_DEADLINE_SECONDS = 120
 CLOUD_LEARNING_LOG_PATH = (
     Path(__file__).resolve().parents[2] / "data" / "cloud_learning.jsonl"
 )
@@ -421,6 +427,8 @@ class Troubleshooter:
             "background": None,
         }
         blueprint_id = None
+        attempts = 0
+        schema_errors = ()
 
         def finish(reason_code: str) -> str:
             entry = {
@@ -434,6 +442,10 @@ class Troubleshooter:
                     "total": round((time.perf_counter() - started) * 1000, 3),
                 },
             }
+            if attempts:
+                entry["attempts"] = attempts
+            if schema_errors:
+                entry["schema_errors"] = list(schema_errors[:10])
             _write_learning_log(entry)
             return self._insufficient_knowledge_response(context)
 
@@ -487,25 +499,37 @@ class Troubleshooter:
             return finish("example_blueprint_unavailable")
 
         cloud_started = time.perf_counter()
-        cloud_future: Future[str] = Future()
+        cloud_deadline = time.monotonic() + LEARNING_CLOUD_DEADLINE_SECONDS
         prompt = build_prompt(redacted_report, example.model_dump(mode="json"))
 
-        def call_learning_cloud() -> None:
-            try:
-                response = CloudLLM(
-                    model_name=model_name,
-                    timeout=60,
-                    max_retries=0,
-                ).generate_response(prompt)
-                cloud_future.set_result(response)
-            except Exception as exc:
-                cloud_future.set_exception(exc)
+        def call_learning_cloud(call_prompt: str) -> Future[str]:
+            cloud_future: Future[str] = Future()
 
-        threading.Thread(target=call_learning_cloud, daemon=True).start()
+            def run_call() -> None:
+                try:
+                    response = CloudLLM(
+                        model_name=model_name,
+                        timeout=60,
+                        max_retries=0,
+                    ).generate_response(call_prompt)
+                    cloud_future.set_result(response)
+                except Exception as exc:
+                    cloud_future.set_exception(exc)
+
+            threading.Thread(target=run_call, daemon=True).start()
+            return cloud_future
+
+        def wait_for_cloud(call_prompt: str) -> str:
+            nonlocal attempts
+            remaining = cloud_deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("learning cloud deadline expired")
+            attempts += 1
+            cloud_future = call_learning_cloud(call_prompt)
+            return cloud_future.result(timeout=remaining)
+
         try:
-            response_text = cloud_future.result(
-                timeout=LEARNING_CLOUD_DEADLINE_SECONDS
-            )
+            response_text = wait_for_cloud(prompt)
             timings_ms["cloud"] = round(
                 (time.perf_counter() - cloud_started) * 1000, 3
             )
@@ -531,30 +555,91 @@ class Troubleshooter:
             return finish(parsed.reason_code)
 
         check_started = time.perf_counter()
-        try:
-            existing_ids = {item.blueprint_id for item in self.blueprints}
-            existing_ids.update(
-                item.blueprint_id for item in blueprint_loader.load_blueprints()
-            )
-            for directory in (
-                blueprint_loader.BLUEPRINT_DIR,
-                blueprint_loader.PROVISIONAL_BLUEPRINT_DIR,
-                blueprint_loader.REJECTED_BLUEPRINT_DIR,
-            ):
-                existing_ids.update(path.stem for path in directory.glob("*.json"))
-            checked = check_learned_blueprint(
-                issue,
-                {"blueprint": parsed.blueprint, "answer": parsed.answer},
-                model_name,
-                existing_ids,
-            )
-        except Exception:
-            timings_ms["checks"] = round(
-                (time.perf_counter() - check_started) * 1000, 3
-            )
+
+        def check_response(parsed_response):
+            try:
+                existing_ids = {item.blueprint_id for item in self.blueprints}
+                existing_ids.update(
+                    item.blueprint_id for item in blueprint_loader.load_blueprints()
+                )
+                for directory in (
+                    blueprint_loader.BLUEPRINT_DIR,
+                    blueprint_loader.PROVISIONAL_BLUEPRINT_DIR,
+                    blueprint_loader.REJECTED_BLUEPRINT_DIR,
+                ):
+                    existing_ids.update(path.stem for path in directory.glob("*.json"))
+                return check_learned_blueprint(
+                    issue,
+                    {
+                        "blueprint": parsed_response.blueprint,
+                        "answer": parsed_response.answer,
+                    },
+                    model_name,
+                    existing_ids,
+                )
+            except Exception:
+                return None
+
+        checked = check_response(parsed)
+        timings_ms["checks"] = round((time.perf_counter() - check_started) * 1000, 3)
+        if checked is None:
             _release_learning_hash(digest)
             return finish("deterministic_check_error")
-        timings_ms["checks"] = round((time.perf_counter() - check_started) * 1000, 3)
+        if checked.schema_errors:
+            schema_errors = checked.schema_errors
+
+        if (
+            not checked.ok
+            and checked.reason_code == "invalid_schema"
+            and checked.schema_errors
+        ):
+            previous_json = json.dumps(
+                {"blueprint": parsed.blueprint, "answer": parsed.answer},
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            repair_prompt = build_repair_prompt(
+                redacted_report,
+                example.model_dump(mode="json"),
+                previous_json,
+                checked.schema_errors,
+            )
+            try:
+                response_text = wait_for_cloud(repair_prompt)
+            except Exception as exc:
+                timings_ms["cloud"] = round(
+                    (time.perf_counter() - cloud_started) * 1000, 3
+                )
+                _release_learning_hash(digest)
+                if isinstance(exc, TimeoutError) or exc.__class__.__name__ in {
+                    "APITimeoutError",
+                    "ConnectTimeout",
+                    "ReadTimeout",
+                }:
+                    return finish("cloud_timeout")
+                return finish("cloud_error")
+
+            timings_ms["cloud"] = round(
+                (time.perf_counter() - cloud_started) * 1000, 3
+            )
+            parsed = parse_output(response_text)
+            if isinstance(parsed, Declined):
+                _release_learning_hash(digest)
+                return finish("declined")
+            if isinstance(parsed, Invalid):
+                _release_learning_hash(digest)
+                return finish(parsed.reason_code)
+            check_started = time.perf_counter()
+            checked = check_response(parsed)
+            timings_ms["checks"] += round(
+                (time.perf_counter() - check_started) * 1000, 3
+            )
+            if checked is None:
+                _release_learning_hash(digest)
+                return finish("deterministic_check_error")
+            if checked.schema_errors:
+                schema_errors = checked.schema_errors
+
         if not checked.ok:
             blueprint_id = (
                 checked.blueprint.blueprint_id if checked.blueprint is not None else None
@@ -577,6 +662,8 @@ class Troubleshooter:
                 redaction_counts,
                 timings_ms,
                 started,
+                attempts,
+                schema_errors,
             )
         except Exception:
             _release_learning_hash(digest)
@@ -595,6 +682,8 @@ class Troubleshooter:
         redaction_counts: dict,
         timings_ms: dict,
         started: float,
+        attempts: int,
+        schema_errors: tuple[str, ...],
     ) -> None:
         blueprint_id = blueprint.blueprint_id
         reason_code = "background_error"
@@ -644,7 +733,13 @@ class Troubleshooter:
                 "reason_code": reason_code,
                 "blueprint_id": blueprint_id,
                 "saved": reason_code in {"saved", "file_exists", "reindex_error"},
+                "attempts": attempts,
                 "redaction_counts": redaction_counts,
+                **(
+                    {"schema_errors": list(schema_errors[:10])}
+                    if schema_errors
+                    else {}
+                ),
                 "timings_ms": {
                     **timings_ms,
                     "total": round((time.perf_counter() - started) * 1000, 3),

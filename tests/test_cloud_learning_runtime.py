@@ -166,10 +166,11 @@ def _request(service, issue):
 
 
 def _mock_cloud(monkeypatch, output=None, error=None):
-    captured = {}
+    captured = {"calls": 0}
 
     class FakeCloud:
         def generate_response(self, prompt):
+            captured["calls"] += 1
             captured["prompt"] = prompt
             if error is not None:
                 raise error
@@ -198,6 +199,13 @@ def _set_learned_cloud(monkeypatch, issue=None):
         monkeypatch,
         json.dumps(learned),
     ), candidate
+
+
+def _encoded_learned(blueprint=None):
+    return json.dumps({
+        "blueprint": blueprint if blueprint is not None else _blueprint_dict(),
+        "answer": _answer(),
+    })
 
 
 def _log_entries(path):
@@ -328,7 +336,7 @@ def test_failed_deterministic_check_discards_blueprint(monkeypatch, tmp_path):
     service, provisional_dir = _setup(monkeypatch, tmp_path)
     bad_answer = _answer()
     bad_answer["action_ids"] = ["restart_redis"]
-    _mock_cloud(
+    cloud = _mock_cloud(
         monkeypatch,
         output=json.dumps(
             {"blueprint": _blueprint_dict(), "answer": bad_answer}
@@ -344,9 +352,117 @@ def test_failed_deterministic_check_discards_blueprint(monkeypatch, tmp_path):
     assert response.status_code == 200
     assert response.json()["solution"] == expected
     assert list(provisional_dir.glob("*.json")) == []
-    assert _log_entries(
-        troubleshooter_module.CLOUD_LEARNING_LOG_PATH
-    )[-1]["reason_code"] != "saved"
+    entry = _log_entries(troubleshooter_module.CLOUD_LEARNING_LOG_PATH)[-1]
+    assert entry["reason_code"] != "saved"
+    assert entry["attempts"] == 1
+    assert cloud["calls"] == 1
+
+
+def test_invalid_schema_logs_safe_diagnostics_without_input_values(
+    monkeypatch, tmp_path
+):
+    service, provisional_dir = _setup(monkeypatch, tmp_path)
+    invalid_blueprint = _blueprint_dict()
+    invalid_blueprint["title"] = ["PRIVATE-INPUT-MUST-NOT-APPEAR"]
+    invalid_blueprint["steps"] = [{
+        "step_number": 0,
+        "instruction": "Check the service.",
+        "expected_result": "A status is available.",
+    }]
+    _mock_cloud(monkeypatch, output=_encoded_learned(invalid_blueprint))
+
+    response = _request(service, _report())
+
+    assert response.status_code == 200
+    assert list(provisional_dir.glob("*.json")) == []
+    entry = _log_entries(troubleshooter_module.CLOUD_LEARNING_LOG_PATH)[-1]
+    assert entry["reason_code"] == "invalid_schema"
+    assert entry["attempts"] == 2
+    assert entry["schema_errors"] == [
+        "title:string_type",
+        "steps.0.step_number:greater_than_equal",
+    ]
+    log_line = troubleshooter_module.CLOUD_LEARNING_LOG_PATH.read_text(
+        encoding="utf-8"
+    )
+    assert "PRIVATE-INPUT-MUST-NOT-APPEAR" not in log_line
+
+
+def test_invalid_schema_gets_one_repair_attempt_and_saves_valid_draft(
+    monkeypatch, tmp_path
+):
+    service, provisional_dir = _setup(monkeypatch, tmp_path)
+    invalid_blueprint = _blueprint_dict()
+    invalid_blueprint["steps"] = [{
+        "step_number": 0,
+        "instruction": "Check the service.",
+        "expected_result": "A status is available.",
+    }]
+    outputs = [_encoded_learned(invalid_blueprint), _encoded_learned()]
+    prompts = []
+
+    class FakeCloud:
+        def generate_response(self, prompt):
+            prompts.append(prompt)
+            return outputs.pop(0)
+
+    def factory(*, model_name, timeout, max_retries):
+        assert timeout == 60
+        assert max_retries == 0
+        return FakeCloud()
+
+    monkeypatch.setattr(troubleshooter_module, "CloudLLM", factory)
+
+    response = _request(service, _report())
+
+    assert response.status_code == 200
+    assert len(prompts) == 2
+    repair_prompt = prompts[1]
+    assert _report() in repair_prompt
+    assert '"step_number": 0' in repair_prompt
+    assert "steps.0.step_number:greater_than_equal" in repair_prompt
+    assert "Fix these fields" in repair_prompt
+    assert len(list(provisional_dir.glob("*.json"))) == 1
+    entry = _log_entries(troubleshooter_module.CLOUD_LEARNING_LOG_PATH)[-1]
+    assert entry["reason_code"] == "saved"
+    assert entry["attempts"] == 2
+    assert entry["schema_errors"] == ["steps.0.step_number:greater_than_equal"]
+
+
+def test_invalid_schema_is_repaired_only_once(monkeypatch, tmp_path):
+    service, provisional_dir = _setup(monkeypatch, tmp_path)
+    invalid_blueprint = _blueprint_dict()
+    invalid_blueprint["steps"] = [{
+        "step_number": 0,
+        "instruction": "Check the service.",
+        "expected_result": "A status is available.",
+    }]
+    outputs = [
+        _encoded_learned(invalid_blueprint),
+        _encoded_learned(invalid_blueprint),
+    ]
+    calls = []
+
+    class FakeCloud:
+        def generate_response(self, prompt):
+            calls.append(prompt)
+            return outputs.pop(0)
+
+    monkeypatch.setattr(
+        troubleshooter_module,
+        "CloudLLM",
+        lambda **_kwargs: FakeCloud(),
+    )
+
+    response = _request(service, _report())
+
+    assert response.status_code == 200
+    assert len(calls) == 2
+    assert list(provisional_dir.glob("*.json")) == []
+    entry = _log_entries(troubleshooter_module.CLOUD_LEARNING_LOG_PATH)[-1]
+    assert entry["reason_code"] == "invalid_schema"
+    assert entry["attempts"] == 2
+    assert entry["schema_errors"] == ["steps.0.step_number:greater_than_equal"]
 
 
 def test_success_saves_provisional_then_answers_repeat_locally(
@@ -377,6 +493,10 @@ def test_success_saves_provisional_then_answers_repeat_locally(
     assert cloud["model_name"] == "mock-model"
     assert cloud["timeout"] == 60
     assert cloud["max_retries"] == 0
+    assert cloud["calls"] == 1
+    assert _log_entries(troubleshooter_module.CLOUD_LEARNING_LOG_PATH)[-1][
+        "attempts"
+    ] == 1
 
     second = _request(service, issue)
 
@@ -488,6 +608,50 @@ def test_learning_cloud_wall_clock_deadline_returns_cloud_timeout(
         )[-1]["reason_code"] == "cloud_timeout"
     finally:
         release_client.set()
+
+
+def test_repair_call_uses_remaining_shared_deadline(
+    monkeypatch, tmp_path
+):
+    service, provisional_dir = _setup(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        troubleshooter_module,
+        "LEARNING_CLOUD_DEADLINE_SECONDS",
+        0.12,
+    )
+    invalid_blueprint = _blueprint_dict()
+    invalid_blueprint["steps"] = [{
+        "step_number": 0,
+        "instruction": "Check the service.",
+        "expected_result": "A status is available.",
+    }]
+    calls = []
+    second_started = threading.Event()
+
+    class SlowRepairCloud:
+        def generate_response(self, _prompt):
+            calls.append(1)
+            if len(calls) == 1:
+                time.sleep(0.06)
+                return _encoded_learned(invalid_blueprint)
+            second_started.set()
+            time.sleep(0.08)
+            return _encoded_learned()
+
+    monkeypatch.setattr(
+        troubleshooter_module,
+        "CloudLLM",
+        lambda **_kwargs: SlowRepairCloud(),
+    )
+
+    response = _request(service, _report())
+    assert response.status_code == 200
+    assert second_started.is_set()
+    assert len(calls) == 2
+    assert list(provisional_dir.glob("*.json")) == []
+    entry = _log_entries(troubleshooter_module.CLOUD_LEARNING_LOG_PATH)[-1]
+    assert entry["reason_code"] == "cloud_timeout"
+    assert entry["attempts"] == 2
 
 
 def test_response_body_is_sent_before_blocking_background_task(

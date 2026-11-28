@@ -219,6 +219,15 @@ def test_build_prompt_orders_instructions_example_then_redacted_report():
     assert "4 to 8 useful retrieval tags" in prompt
     assert "report is redacted" in prompt
     assert "blueprint_id may be any short string" in prompt
+    assert "ONLY when the report names no identifiable technology" in prompt
+    assert "Do not decline reports naming Kubernetes, Docker" in prompt
+    assert "title (string)" in prompt
+    assert "problem_summary (string)" in prompt
+    assert "symptoms (list)" in prompt
+    assert "steps (list)" in prompt
+    assert "verification_checks (list)" in prompt
+    assert "plain JSON strings" in prompt
+    assert "JSON lists" in prompt
 
 
 def test_parse_output_declined_valid_fenced_and_prose_wrapped():
@@ -445,6 +454,34 @@ def test_learned_blueprint_failure_reasons(blueprint, answer, existing_ids, reas
     )
     assert not result.ok
     assert result.reason_code == reason
+
+
+def test_invalid_blueprint_validation_reports_only_paths_and_error_types():
+    blueprint = _blueprint_dict(
+        title=["PRIVATE-INPUT-MUST-NOT-APPEAR"],
+        steps=[
+            {
+                "step_number": 0,
+                "instruction": "Check.",
+                "expected_result": "Done.",
+            }
+        ],
+    )
+
+    result = check_learned_blueprint(
+        "Redis connection refused by the endpoint.",
+        _learned(blueprint),
+        "test-model",
+        set(),
+    )
+
+    assert not result.ok
+    assert result.reason_code == "invalid_schema"
+    assert result.schema_errors == (
+        "title:string_type",
+        "steps.0.step_number:greater_than_equal",
+    )
+    assert "PRIVATE-INPUT-MUST-NOT-APPEAR" not in str(result.schema_errors)
 
 
 def test_learned_blueprint_rejects_too_many_diagnoses():
