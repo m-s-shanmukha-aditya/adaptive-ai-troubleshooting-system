@@ -1,0 +1,8 @@
+{
+  "scenario": "s4_vague",
+  "run": 1,
+  "issue": "Something is wrong with my database connection and I do not know what.",
+  "elapsed_seconds": 0.03278579993639141,
+  "http_status": 200,
+  "response_body": "{\"issue\":\"Something is wrong with my database connection and I do not know what.\",\"solution\":\"{\\\"schema_version\\\":\\\"1\\\",\\\"diagnosis\\\":{\\\"id\\\":\\\"undetermined\\\",\\\"summary\\\":\\\"No relevant approved troubleshooting blueprint was available; the diagnosis is undetermined.\\\",\\\"status\\\":\\\"insufficient_evidence\\\"},\\\"evidence\\\":[],\\\"recommended_actions\\\":[],\\\"resolution_claim\\\":\\\"unverified\\\",\\\"follow_up_questions\\\":[\\\"What exact error message or relevant log excerpt do you see? Redact credentials, tokens, and other secrets.\\\",\\\"Which application, service, or tool is affected, and what version and platform is it running on?\\\"]}\"}"
+}

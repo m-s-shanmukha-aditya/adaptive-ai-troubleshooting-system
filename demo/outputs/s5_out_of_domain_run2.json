@@ -2,7 +2,7 @@
   "scenario": "s5_out_of_domain",
   "run": 2,
   "issue": "My Kubernetes pod is stuck in CrashLoopBackOff after I updated the deployment image.",
-  "elapsed_seconds": 0.014333700062707067,
+  "elapsed_seconds": 0.03216420009266585,
   "http_status": 200,
   "response_body": "{\"issue\":\"My Kubernetes pod is stuck in CrashLoopBackOff after I updated the deployment image.\",\"solution\":\"{\\\"schema_version\\\":\\\"1\\\",\\\"diagnosis\\\":{\\\"id\\\":\\\"undetermined\\\",\\\"summary\\\":\\\"No relevant approved troubleshooting blueprint was available; the diagnosis is undetermined.\\\",\\\"status\\\":\\\"insufficient_evidence\\\"},\\\"evidence\\\":[],\\\"recommended_actions\\\":[],\\\"resolution_claim\\\":\\\"unverified\\\",\\\"follow_up_questions\\\":[\\\"What exact error message or relevant log excerpt do you see? Redact credentials, tokens, and other secrets.\\\",\\\"Which application, service, or tool is affected, and what version and platform is it running on?\\\",\\\"What changed shortly before the issue began, and what steps reproduce it?\\\"]}\"}"
 }

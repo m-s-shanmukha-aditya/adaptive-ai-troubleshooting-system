@@ -2,7 +2,7 @@
   "scenario": "s2_port_mismatch",
   "run": 3,
   "issue": "My Spring Boot datasource port is 5433 but the PostgreSQL server is listening on port 5432, so the connection fails.",
-  "elapsed_seconds": 20.957317400025204,
+  "elapsed_seconds": 7.939818000071682,
   "http_status": 200,
-  "response_body": "{\"issue\":\"My Spring Boot datasource port is 5433 but the PostgreSQL server is listening on port 5432, so the connection fails.\",\"solution\":\"No candidate passed runtime validation. Validation issues: diagnosis_not_supported_by_cited_observations. No diagnosis was validated and no resolution was verified.\"}"
+  "response_body": "{\"issue\":\"My Spring Boot datasource port is 5433 but the PostgreSQL server is listening on port 5432, so the connection fails.\",\"solution\":\"[Local candidate selected; runtime diagnosis is not ground-truth verified]\\n\\n{\\\"schema_version\\\":\\\"1\\\",\\n\\\"diagnosis\\\":{\\n  \\\"id\\\":\\\"postgres_connection_issue_uncertain\\\",\\n  \\\"summary\\\":\\\"The Spring Boot datasource port is mismatched with the PostgreSQL server's listening port, causing a connection failure.\\\",\\n  \\\"status\\\":\\\"uncertain\\\"\\n},\\n\\\"evidence\\\":[\\n  {\\n    \\\"observation_id\\\":\\\"datasource_port\\\",\\n    \\\"interpretation\\\":\\\"The Spring Boot datasource port is 5433.\\\"\\n  },\\n  {\\n    \\\"observation_id\\\":\\\"listener_port\\\",\\n    \\\"interpretation\\\":\\\"The PostgreSQL server is listening on port 5432.\\\"\\n  }\\n],\\n\\\"recommended_actions\\\":[\\n  {\\\"action_id\\\":\\\"verify_service_status\\\"},\\n  {\\\"action_id\\\":\\\"check_host_reachability\\\"},\\n  {\\\"action_id\\\":\\\"verify_datasource_url\\\"}\\n],\\n\\\"resolution_claim\\\":\\\"unverified\\\",\\n\\\"follow_up_questions\\\":[]}\\n\\nDiagnosis correctness: unknown. The database connection has not been verified.\"}"
 }
