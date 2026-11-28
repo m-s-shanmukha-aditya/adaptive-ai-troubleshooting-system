@@ -95,9 +95,15 @@ class Troubleshooter:
                 break
             if iteration == self.max_repairs:
                 break
+            parsed_candidate = self.evaluator.parse(candidate)
+            allowed_action_ids = (
+                self._allowed_action_ids_for_diagnosis(knowledge, parsed_candidate.diagnosis.id)
+                if parsed_candidate else []
+            )
             repair_prompt = ("Repair only the deterministic output defects listed below. Do not change a diagnosis merely because its correctness is unknown. Return the full JSON candidate.\n"
                              f"ISSUE: {issue}\nAVAILABLE OBSERVATIONS: {json.dumps(context.observations)}\n"
                              f"KNOWLEDGE DIAGNOSES AND ACTION IDs:\n{self._knowledge_id_guidance(knowledge)}\n"
+                             f"ALLOWED ACTION IDs FOR SELECTED DIAGNOSIS: {json.dumps(allowed_action_ids)}\n"
                              f"CANDIDATE:\n{candidate}\nREPAIR DEFECTS: {json.dumps(evaluation.repair_reasons)}")
             try:
                 candidate = self.llm.generate_response(repair_prompt)
@@ -248,7 +254,20 @@ class Troubleshooter:
                                for key, value in blueprint.diagnoses.items())
         actions = "\n".join(f"- {key}: {value.get('meaning', '')}; relevant diagnoses: {value.get('diagnosis_ids', [])}"
                              for key, value in blueprint.actions.items())
-        return f"Diagnoses (choose one):\n{diagnoses}\nActions (choose only relevant IDs):\n{actions}"
+        allowed_actions = "\n".join(
+            f"- {diagnosis_id}: {', '.join(Troubleshooter._allowed_action_ids_for_diagnosis(blueprint, diagnosis_id)) or '(none)'}"
+            for diagnosis_id in blueprint.diagnoses
+        )
+        return (f"Diagnoses (choose one):\n{diagnoses}\nActions (choose only relevant IDs):\n{actions}\n"
+                f"Allowed action IDs for each diagnosis:\n{allowed_actions}")
+
+    @staticmethod
+    def _allowed_action_ids_for_diagnosis(blueprint, diagnosis_id: str) -> list[str]:
+        return sorted(
+            action_id
+            for action_id, definition in blueprint.actions.items()
+            if diagnosis_id in definition.get("diagnosis_ids", [])
+        )
 
     @staticmethod
     def _insufficient_knowledge_response(context: IssueContext) -> str:

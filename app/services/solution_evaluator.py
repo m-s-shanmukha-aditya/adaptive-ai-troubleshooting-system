@@ -162,6 +162,8 @@ class SolutionEvaluator:
         if action_defs and parsed.diagnosis.id in diagnosis_ids:
             relevant = {key for key, definition in action_defs.items()
                         if parsed.diagnosis.id in definition.get("diagnosis_ids", [])}
+            if action_ids and not action_ids.issubset(relevant):
+                reasons.append("action_not_allowed_for_diagnosis")
             if action_ids and not action_ids.intersection(relevant):
                 reasons.append("actions_not_relevant_to_diagnosis")
         if parsed.resolution_claim.lower() not in {"unverified", "not_verified", "unknown"}:

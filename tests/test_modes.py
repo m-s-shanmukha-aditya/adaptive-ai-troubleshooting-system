@@ -87,6 +87,42 @@ def test_runtime_checks_diagnosis_support_and_action_relevance_from_knowledge():
     assert "actions_not_relevant_to_diagnosis" in unsupported.repair_reasons
 
 
+def test_runtime_actions_must_be_allowed_for_the_selected_diagnosis():
+    blueprint = next(item for item in load_blueprints() if item.category == "database")
+    evaluator = SolutionEvaluator()
+    observations = {"service_state": "stopped"}
+
+    allowed = evaluator.evaluate_runtime(
+        structured("postgres_service_stopped", "service_state", "verify_service_status"),
+        observations,
+        blueprint,
+    )
+    disallowed = evaluator.evaluate_runtime(
+        structured("postgres_service_stopped", "service_state", "check_host_reachability"),
+        observations,
+        blueprint,
+    )
+
+    assert allowed.repair_reasons == []
+    assert "action_not_allowed_for_diagnosis" in disallowed.repair_reasons
+
+
+def test_runtime_repair_feedback_names_selected_diagnosis_actions(monkeypatch):
+    invalid = structured("postgres_service_stopped", "service_state", "check_host_reachability")
+    repaired = structured("postgres_service_stopped", "service_state", "start_postgres_service")
+    troubleshooter, llm, _ = _stub_runtime(monkeypatch, [invalid, repaired])
+
+    troubleshooter.troubleshoot("PostgreSQL service is stopped")
+
+    first_prompt = llm.generate_response.call_args_list[0].args[0]
+    repair_prompt = llm.generate_response.call_args_list[1].args[0]
+    allowed_ids = '["start_postgres_service", "verify_service_status"]'
+    assert "Allowed action IDs for each diagnosis:" in first_prompt
+    assert "postgres_service_stopped: start_postgres_service, verify_service_status" in first_prompt
+    assert "action_not_allowed_for_diagnosis" in repair_prompt
+    assert f"ALLOWED ACTION IDs FOR SELECTED DIAGNOSIS: {allowed_ids}" in repair_prompt
+
+
 def test_runtime_vocabulary_can_come_from_another_domain_knowledge_file():
     blueprint = next(item for item in load_blueprints() if item.category == "database").model_copy(update={
         "diagnoses": {"cache_lock_contention": {"meaning": "reported cache lock contention", "supporting_evidence": ["reported_detail_1"]}},
