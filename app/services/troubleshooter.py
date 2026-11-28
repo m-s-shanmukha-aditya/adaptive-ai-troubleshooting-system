@@ -25,6 +25,7 @@ from app.services.candidate_selector import CandidateSelector
 from app.services.rule_interpreter import (
     RuleInterpreter,
     interpreter_applicable,
+    observations_by_id,
 )
 from app.services.blueprint_reindex import register_troubleshooter
 
@@ -103,10 +104,7 @@ class Troubleshooter:
             and interpreter_applicable(knowledge)
         ):
             interpreted = RuleInterpreter().interpret(issue, knowledge)
-            context.observations = {
-                observation.id: observation.matched_text
-                for observation in interpreted.observations
-            }
+            context.observations = observations_by_id(interpreted)
         # Runtime mode receives issue evidence only. Controlled fixtures and answer keys
         # remain in TestCaseGenerator and are never loaded into this prompt or evaluator.
         prompt = self._candidate_prompt(issue, context, knowledge)

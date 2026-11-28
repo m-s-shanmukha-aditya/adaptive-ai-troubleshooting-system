@@ -161,6 +161,14 @@ class RuleInterpretation(BaseModel):
     skipped_comparisons: list[SkippedComparison] = Field(default_factory=list)
 
 
+def observations_by_id(interpretation: RuleInterpretation) -> dict[str, str]:
+    """Map interpreted evidence IDs to matched text, matching runtime adapter behavior."""
+    return {
+        observation.id: observation.matched_text
+        for observation in interpretation.observations
+    }
+
+
 class RuleInterpreter:
     """Evaluate blueprint analysis rules without changing the report or blueprint."""
 
